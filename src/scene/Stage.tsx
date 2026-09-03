@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { useSession } from '../state/session'
 import { Baseplate } from './Baseplate'
 import { CameraRig, type CameraPreset } from './CameraRig'
+import { PlacedBricks } from './PlacedBricks'
 
 export function Stage() {
   const board = useSession((state) => state.derived.puzzle.board)
@@ -13,6 +14,7 @@ export function Stage() {
       <Canvas
         gl={{ antialias: true, alpha: true }}
         camera={{ fov: 45, near: 0.1, far: 120 }}
+        shadows
       >
         <ambientLight intensity={0.4} />
         <hemisphereLight args={['#FFFFFF', '#9AA7BD', 0.8]} />
@@ -20,6 +22,7 @@ export function Stage() {
           position={[6, 12, 8]}
           intensity={0.65}
           color="#FFFFFF"
+          castShadow
         />
         <CameraRig
           board={board}
@@ -27,6 +30,7 @@ export function Stage() {
           onUserDrag={() => setActivePreset(null)}
         />
         <Baseplate board={board} />
+        <PlacedBricks />
       </Canvas>
 
       <div className="stage-presets" role="toolbar" aria-label="Camera presets">
