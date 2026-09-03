@@ -70,6 +70,26 @@ html, body {
   font-size: var(--font-size-base);
 }
 
+.puzzle-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.puzzle-name {
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+  color: var(--ink);
+  line-height: 1;
+}
+
+.puzzle-counter {
+  font-size: 13px;
+  font-weight: var(--font-weight-regular);
+  color: var(--quiet);
+  line-height: 1;
+}
+
 /* Main 3-column workspace (Grid: 200px 1fr 240px with 12px gap) */
 .app-main {
   display: grid;
@@ -144,7 +164,7 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 4px;
+  gap: 6px;
   background-color: var(--sheet);
   border: 1px solid var(--rule);
   border-radius: 6px;
@@ -175,7 +195,8 @@ html, body {
 
 .preset-button.active {
   background-color: var(--stage);
-  border-color: var(--rule);
+  outline: 2px solid var(--ink);
+  outline-offset: -1px;
 }
 
 /* Universal Focus Ring */
