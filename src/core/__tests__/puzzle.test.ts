@@ -1,0 +1,71 @@
+import { describe, expect, it } from "vitest";
+import { derivePuzzle, loadPuzzles, validatePuzzle } from "../puzzle";
+import type { Puzzle } from "../types";
+
+const step01: Puzzle = {
+  id: "step-01",
+  name: "Two bricks",
+  hint: "The top view shows where the bricks sit on the board.",
+  board: { width: 6, depth: 6, height: 5 },
+  solution: [
+    { instanceId: "a", typeId: "2x4", rotation: 0, origin: { x: 1, y: 0, z: 1 } },
+    { instanceId: "b", typeId: "2x2", rotation: 90, origin: { x: 1, y: 1, z: 1 } },
+  ],
+};
+
+describe("derivePuzzle", () => {
+  it("tallies the tray from the solution", () => {
+    const derived = derivePuzzle(step01);
+    expect(derived.tray).toEqual({ "2x2": 1, "2x3": 0, "2x4": 1 });
+  });
+
+  it("expands the solution to its full cell set", () => {
+    const derived = derivePuzzle(step01);
+    // 2x4 = 8 cells, 2x2 = 4 cells, no overlap.
+    expect(derived.cells.size).toBe(12);
+  });
+
+  it("gridifies view grids at board dimensions", () => {
+    const derived = derivePuzzle(step01);
+    expect(derived.viewGrids.front).toHaveLength(step01.board.height);
+    expect(derived.viewGrids.front[0]).toHaveLength(step01.board.width);
+    expect(derived.viewGrids.right).toHaveLength(step01.board.height);
+    expect(derived.viewGrids.right[0]).toHaveLength(step01.board.depth);
+    expect(derived.viewGrids.top).toHaveLength(step01.board.depth);
+    expect(derived.viewGrids.top[0]).toHaveLength(step01.board.width);
+  });
+});
+
+describe("validatePuzzle", () => {
+  it("accepts a puzzle whose solution replays cleanly", () => {
+    expect(() => validatePuzzle(step01)).not.toThrow();
+  });
+
+  it("rejects a puzzle with an overlapping placement, naming the instanceId", () => {
+    const broken: Puzzle = {
+      ...step01,
+      solution: [
+        { instanceId: "a", typeId: "2x2", rotation: 0, origin: { x: 0, y: 0, z: 0 } },
+        { instanceId: "b", typeId: "2x2", rotation: 0, origin: { x: 0, y: 0, z: 0 } },
+      ],
+    };
+    expect(() => validatePuzzle(broken)).toThrow(/"b".*overlap/);
+  });
+
+  it("rejects a puzzle with an unsupported placement", () => {
+    const broken: Puzzle = {
+      ...step01,
+      solution: [{ instanceId: "a", typeId: "2x2", rotation: 0, origin: { x: 0, y: 1, z: 0 } }],
+    };
+    expect(() => validatePuzzle(broken)).toThrow(/"a".*unsupported/);
+  });
+});
+
+describe("loadPuzzles", () => {
+  it("loads puzzles from src/data/puzzles sorted by filename", () => {
+    const puzzles = loadPuzzles();
+    const ids = puzzles.map((p) => p.id);
+    expect(ids).toContain("step-01");
+    expect(ids).toEqual([...ids].sort());
+  });
+});
