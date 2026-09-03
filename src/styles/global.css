@@ -50,6 +50,8 @@ html, body {
   min-height: var(--app-min-height);
   max-width: 1920px;
   margin: 0 auto;
+  padding: 12px;
+  gap: 12px;
   background-color: var(--desk);
 }
 
@@ -61,16 +63,18 @@ html, body {
   justify-content: space-between;
   padding: 0 16px;
   background-color: var(--sheet);
-  border-bottom: 1px solid var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
   color: var(--ink);
   font-family: var(--font-family);
   font-size: var(--font-size-base);
 }
 
-/* Main 3-column workspace (Grid: 200px 1fr 240px) */
+/* Main 3-column workspace (Grid: 200px 1fr 240px with 12px gap) */
 .app-main {
   display: grid;
   grid-template-columns: var(--tray-width) minmax(0, 1fr) var(--views-width);
+  gap: 12px;
   min-height: 0;
   height: 100%;
   position: relative;
@@ -80,7 +84,8 @@ html, body {
 .app-tray-region {
   width: var(--tray-width);
   background-color: var(--sheet);
-  border-right: 1px solid var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -91,6 +96,8 @@ html, body {
 .app-board-region {
   min-width: 0;
   background-color: var(--stage);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -101,7 +108,8 @@ html, body {
 .app-views-region {
   width: var(--views-width);
   background-color: var(--sheet);
-  border-left: 1px solid var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   overflow-y: hidden;
@@ -116,7 +124,8 @@ html, body {
   justify-content: space-between;
   padding: 0 16px;
   background-color: var(--sheet);
-  border-top: 1px solid var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
   color: var(--ink);
   font-family: var(--font-family);
   font-size: var(--font-size-base);
@@ -138,6 +147,7 @@ html, body {
   gap: 4px;
   background-color: var(--sheet);
   border: 1px solid var(--rule);
+  border-radius: 6px;
   padding: 4px;
   z-index: 10;
   user-select: none;
@@ -155,7 +165,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 4px;
-  border-radius: 0;
+  border-radius: 4px;
   transition: background-color 0.1s ease;
 }
 
