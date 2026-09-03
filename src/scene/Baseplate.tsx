@@ -35,20 +35,38 @@ export function Baseplate({ board }: BaseplateProps) {
     return geometry
   }, [width, depth])
 
-  // Crisp canvas texture for the FRONT marker
-  const frontTexture = useMemo(() => {
+  // Large, high-contrast billboard sprite texture for the FRONT marker
+  const frontBadgeTexture = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 512
-    canvas.height = 128
+    canvas.height = 160
     const ctx = canvas.getContext('2d')
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      // High contrast token: --quiet #55616F
-      ctx.fillStyle = '#55616F'
-      ctx.font = 'bold 64px "Atkinson Hyperlegible Next Variable", sans-serif'
+
+      // Crisp white pill badge with 1px/2px equivalent border in --rule
+      const x = 20, y = 16, w = 472, h = 128, r = 64
+      ctx.beginPath()
+      ctx.moveTo(x + r, y)
+      ctx.lineTo(x + w - r, y)
+      ctx.arcTo(x + w, y, x + w, y + h, r)
+      ctx.arcTo(x + w, y + h, x, y + h, r)
+      ctx.arcTo(x, y + h, x, y, r)
+      ctx.arcTo(x, y, x + w, y, r)
+      ctx.closePath()
+
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fill()
+      ctx.strokeStyle = '#B7C1CC'
+      ctx.lineWidth = 8
+      ctx.stroke()
+
+      // Large bold text in --ink (#1B2231)
+      ctx.fillStyle = '#1B2231'
+      ctx.font = 'bold 68px "Atkinson Hyperlegible Next Variable", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText('FRONT', 256, 64)
+      ctx.fillText('FRONT', 256, 82)
     }
     const texture = new THREE.CanvasTexture(canvas)
     texture.colorSpace = THREE.SRGBColorSpace
@@ -77,31 +95,17 @@ export function Baseplate({ board }: BaseplateProps) {
         <lineBasicMaterial color="#B7C1CC" />
       </lineSegments>
 
-      {/* FRONT marker on top surface of plate (visible in Top and 3D views) */}
-      <mesh
-        position={[centerX, 0.005, depth - 0.5 - 0.35]}
-        rotation={[-Math.PI / 2, 0, 0]}
+      {/* Prominent billboard Sprite on +z edge (always faces camera, never foreshortened) */}
+      <sprite
+        position={[centerX, 0.35, depth - 0.48]}
+        scale={[2.2, 0.72, 1]}
       >
-        <planeGeometry args={[1.8, 0.45]} />
-        <meshBasicMaterial
-          map={frontTexture}
+        <spriteMaterial
+          map={frontBadgeTexture}
           transparent
-          depthWrite={false}
+          depthTest={false}
         />
-      </mesh>
-
-      {/* FRONT marker on front vertical face of plate (directly facing camera in Front preset) */}
-      <mesh
-        position={[centerX, -0.2, depth - 0.5 + 0.002]}
-        rotation={[0, 0, 0]}
-      >
-        <planeGeometry args={[2.0, 0.28]} />
-        <meshBasicMaterial
-          map={frontTexture}
-          transparent
-          depthWrite={false}
-        />
-      </mesh>
+      </sprite>
     </group>
   )
 }
