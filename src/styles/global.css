@@ -352,6 +352,193 @@ html, body {
   color: var(--miss);
 }
 
+/* PuzzleBar styles */
+.puzzle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+
+.reset-button {
+  background-color: transparent;
+  color: var(--quiet);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.reset-button:hover {
+  background-color: var(--stage);
+  color: var(--ink);
+}
+
+/* Toolbar styles */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  gap: 16px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-button {
+  background-color: transparent;
+  color: var(--ink);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.toolbar-button:hover {
+  background-color: var(--stage);
+}
+
+.mode-segmented-group {
+  display: flex;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background-color: var(--sheet);
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-button {
+  background-color: transparent;
+  color: var(--ink);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.mode-button:hover:not(.active) {
+  background-color: var(--stage);
+}
+
+.mode-button.active {
+  background-color: var(--stage);
+  outline: 2px solid var(--ink);
+  outline-offset: -1px;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+}
+
+.feedback-message {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--quiet);
+  transition: color 0.15s ease;
+}
+
+.feedback-message.views-mismatch {
+  color: var(--miss);
+}
+
+.feedback-message.solved {
+  color: var(--match);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 110px;
+}
+
+.check-button {
+  background-color: var(--stage);
+  color: var(--ink);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.check-button:hover {
+  background-color: var(--desk);
+}
+
+.next-puzzle-button {
+  background-color: var(--ink);
+  color: #FFFFFF;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: opacity 0.1s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.next-puzzle-button:hover {
+  opacity: 0.9;
+}
+
+/* Board reject floating badge */
+.board-reject-badge {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--sheet);
+  border: 2px solid var(--miss);
+  color: var(--miss);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  padding: 8px 16px;
+  border-radius: 20px;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* Universal Focus Ring */
 :focus-visible {
   outline: var(--focus-ring);
