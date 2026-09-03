@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useSession } from './state/session'
+import { loadPuzzles } from './core/puzzle'
 import { Stage } from './scene/Stage'
 
 export default function App() {
+  const puzzle = useSession((state) => state.derived.puzzle)
+  const allPuzzles = useMemo(() => loadPuzzles(), [])
+  const puzzleIndex = allPuzzles.findIndex((p) => p.id === puzzle.id)
+  const puzzleCount = allPuzzles.length
+
   const [isSupportedScreen, setIsSupportedScreen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 1024
@@ -28,7 +35,10 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header" aria-label="Puzzle header">
-        <span>Puzzle 1 of 6 · Steps</span>
+        <div className="puzzle-title-group">
+          <span className="puzzle-name">{puzzle.name}</span>
+          <span className="puzzle-counter">Puzzle {puzzleIndex + 1} of {puzzleCount}</span>
+        </div>
       </header>
       <main className="app-main">
         <aside className="app-tray-region" aria-label="Brick tray" />
