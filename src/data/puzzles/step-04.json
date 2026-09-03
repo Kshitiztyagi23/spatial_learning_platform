@@ -1,0 +1,10 @@
+{
+  "id": "step-04",
+  "name": "The L",
+  "hint": "The side view shows a part the front view hides.",
+  "board": { "width": 6, "depth": 6, "height": 5 },
+  "solution": [
+    { "instanceId": "a", "typeId": "2x4", "rotation": 90, "origin": { "x": 0, "y": 0, "z": 0 } },
+    { "instanceId": "b", "typeId": "2x3", "rotation": 0, "origin": { "x": 0, "y": 0, "z": 2 } }
+  ]
+}
