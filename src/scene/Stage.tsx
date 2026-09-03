@@ -1,13 +1,19 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
+import type * as THREE from 'three'
 import { useSession } from '../state/session'
 import { Baseplate } from './Baseplate'
 import { CameraRig, type CameraPreset } from './CameraRig'
 import { PlacedBricks } from './PlacedBricks'
+import { SceneInteraction } from './SceneInteraction'
 
 export function Stage() {
   const board = useSession((state) => state.derived.puzzle.board)
   const [activePreset, setActivePreset] = useState<CameraPreset | null>('3d')
+  const [highlightedInstanceId, setHighlightedInstanceId] = useState<string | null>(null)
+
+  const plateRef = useRef<THREE.Mesh>(null)
+  const placedRef = useRef<THREE.Group>(null)
 
   return (
     <div className="stage-container">
@@ -29,8 +35,13 @@ export function Stage() {
           activePreset={activePreset}
           onUserDrag={() => setActivePreset(null)}
         />
-        <Baseplate board={board} />
-        <PlacedBricks />
+        <Baseplate ref={plateRef} board={board} />
+        <PlacedBricks ref={placedRef} highlightedInstanceId={highlightedInstanceId} />
+        <SceneInteraction
+          plateRef={plateRef}
+          placedRef={placedRef}
+          onHighlightChange={setHighlightedInstanceId}
+        />
       </Canvas>
 
       <div className="stage-presets" role="toolbar" aria-label="Camera presets">
