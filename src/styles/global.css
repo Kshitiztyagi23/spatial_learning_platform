@@ -1,0 +1,140 @@
+@import './tokens.css';
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Below 1024px screen notice */
+.screen-fallback {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .app-shell {
+    display: none !important;
+  }
+
+  .screen-fallback {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--desk);
+    color: var(--ink);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-regular);
+    text-align: center;
+    padding: 16px;
+  }
+}
+
+/* Desktop App Shell (>= 1024px) */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
+  background-color: var(--desk);
+}
+
+/* Header bar */
+.app-header {
+  height: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: var(--font-size-base);
+}
+
+/* Main 3-column workspace */
+.app-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+/* Left Tray Column: fixed 200px */
+.app-tray-region {
+  width: var(--tray-width);
+  min-width: var(--tray-width);
+  max-width: var(--tray-width);
+  background-color: var(--sheet);
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Center Board Stage: flex 1 (takes the rest) */
+.app-board-region {
+  flex: 1;
+  min-width: 0;
+  background-color: var(--stage);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Right Views Column: fixed 240px */
+.app-views-region {
+  width: var(--views-width);
+  min-width: var(--views-width);
+  max-width: var(--views-width);
+  background-color: var(--sheet);
+  border-left: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+/* Footer / Toolbar bar */
+.app-footer {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--sheet);
+  border-top: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: var(--font-size-base);
+}
+
+/* Universal Focus Ring */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
