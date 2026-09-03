@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, forwardRef } from 'react'
 import * as THREE from 'three'
 import type { BoardSize } from '../core/types'
 
@@ -6,7 +6,7 @@ interface BaseplateProps {
   board: BoardSize
 }
 
-export function Baseplate({ board }: BaseplateProps) {
+export const Baseplate = forwardRef<THREE.Mesh, BaseplateProps>(({ board }, ref) => {
   const { width, depth } = board
   const centerX = (width - 1) / 2
   const centerZ = (depth - 1) / 2
@@ -44,7 +44,7 @@ export function Baseplate({ board }: BaseplateProps) {
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // Crisp white pill badge with 1px/2px equivalent border in --rule
+      // Crisp white pill badge with 2px-equivalent border in --rule
       const x = 20, y = 16, w = 472, h = 128, r = 64
       ctx.beginPath()
       ctx.moveTo(x + r, y)
@@ -78,6 +78,7 @@ export function Baseplate({ board }: BaseplateProps) {
     <group name="board-group">
       {/* Baseplate solid slab */}
       <mesh
+        ref={ref}
         name="plate"
         position={[centerX, -0.2, centerZ]}
         receiveShadow
@@ -108,4 +109,6 @@ export function Baseplate({ board }: BaseplateProps) {
       </sprite>
     </group>
   )
-}
+})
+
+Baseplate.displayName = 'Baseplate'

@@ -5,12 +5,13 @@ import type { Placement } from '../core/types'
 
 interface BrickMeshProps {
   placement: Placement
+  isHighlighted?: boolean
 }
 
 // No-op raycast so raycaster passes through studs to the brick body
 const noopRaycast = () => {}
 
-export function BrickMesh({ placement }: BrickMeshProps) {
+export function BrickMesh({ placement, isHighlighted = false }: BrickMeshProps) {
   const { typeId, rotation, origin } = placement
   const piece = PIECES[typeId]
   const { w, d } = footprintFor(typeId, rotation)
@@ -45,6 +46,8 @@ export function BrickMesh({ placement }: BrickMeshProps) {
         <boxGeometry args={[w - 0.03, 0.97, d - 0.03]} />
         <meshStandardMaterial
           color={piece.color}
+          emissive={isHighlighted ? '#B8502E' : '#000000'}
+          emissiveIntensity={isHighlighted ? 0.65 : 0}
           roughness={0.42}
           metalness={0.02}
         />
@@ -61,6 +64,8 @@ export function BrickMesh({ placement }: BrickMeshProps) {
           <cylinderGeometry args={[0.18, 0.18, 0.14, 16]} />
           <meshStandardMaterial
             color={piece.color}
+            emissive={isHighlighted ? '#B8502E' : '#000000'}
+            emissiveIntensity={isHighlighted ? 0.65 : 0}
             roughness={0.42}
             metalness={0.02}
           />
