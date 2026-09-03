@@ -37,7 +37,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header" aria-label="Puzzle header">
-        <PuzzleBar allPuzzles={allPuzzles} />
+        <PuzzleBar />
       </header>
 
       <main className="app-main">
