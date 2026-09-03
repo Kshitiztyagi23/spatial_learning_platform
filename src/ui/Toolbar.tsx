@@ -1,9 +1,5 @@
 import { useSession } from '../state/session'
-import type { CheckOutcome, Puzzle } from '../core/types'
-
-interface ToolbarProps {
-  allPuzzles: Puzzle[]
-}
+import type { CheckOutcome } from '../core/types'
 
 const CHECK_MESSAGES: Record<CheckOutcome, string> = {
   empty: 'Place some bricks first.',
@@ -12,26 +8,17 @@ const CHECK_MESSAGES: Record<CheckOutcome, string> = {
   solved: "That's the shape.",
 }
 
-export function Toolbar({ allPuzzles }: ToolbarProps) {
+export function Toolbar() {
   const mode = useSession((state) => state.mode)
   const lastCheck = useSession((state) => state.lastCheck)
-  const currentPuzzle = useSession((state) => state.derived.puzzle)
   const rotateCW = useSession((state) => state.rotateCW)
   const runCheck = useSession((state) => state.runCheck)
-  const loadPuzzle = useSession((state) => state.loadPuzzle)
+  const clearBoard = useSession((state) => state.clearBoard)
+  const nextPuzzle = useSession((state) => state.nextPuzzle)
 
   const isSolved = lastCheck?.outcome === 'solved'
 
-  const handleNext = () => {
-    const currentIndex = allPuzzles.findIndex((p) => p.id === currentPuzzle.id)
-    const nextIndex = (currentIndex + 1) % allPuzzles.length
-    const nextPuzzle = allPuzzles[nextIndex]
-    if (nextPuzzle) {
-      loadPuzzle(nextPuzzle.id)
-    }
-  }
-
-  // Determine center feedback message
+  // Center feedback message
   let feedbackMessage = 'Match all three views.'
   if (lastCheck) {
     feedbackMessage = CHECK_MESSAGES[lastCheck.outcome] ?? feedbackMessage
@@ -82,13 +69,22 @@ export function Toolbar({ allPuzzles }: ToolbarProps) {
         </span>
       </div>
 
-      {/* Right: Check or Next puzzle button */}
+      {/* Right: Clear board, and Check or Next puzzle */}
       <div className="toolbar-right">
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={clearBoard}
+          aria-label="Clear board"
+        >
+          Clear board
+        </button>
+
         {isSolved ? (
           <button
             type="button"
             className="next-puzzle-button"
-            onClick={handleNext}
+            onClick={nextPuzzle}
             aria-label="Next puzzle"
           >
             Next puzzle
