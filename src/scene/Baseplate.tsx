@@ -35,7 +35,7 @@ export const Baseplate = forwardRef<THREE.Mesh, BaseplateProps>(({ board }, ref)
     return geometry
   }, [width, depth])
 
-  // Large, high-contrast billboard sprite texture for the FRONT marker
+  // Flat ground-decal texture for the FRONT marker
   const frontBadgeTexture = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 512
@@ -96,17 +96,15 @@ export const Baseplate = forwardRef<THREE.Mesh, BaseplateProps>(({ board }, ref)
         <lineBasicMaterial color="#B7C1CC" />
       </lineSegments>
 
-      {/* Prominent billboard Sprite on +z edge (always faces camera, never foreshortened) */}
-      <sprite
-        position={[centerX, 0.35, depth - 0.48]}
-        scale={[2.2, 0.72, 1]}
+      {/* Flat marker lying on the ground just past the +z edge, normal depth testing
+          so stacked bricks correctly occlude it instead of it drawing through them. */}
+      <mesh
+        position={[centerX, 0.02, depth - 0.5 + 0.4]}
+        rotation={[-Math.PI / 2, 0, 0]}
       >
-        <spriteMaterial
-          map={frontBadgeTexture}
-          transparent
-          depthTest={false}
-        />
-      </sprite>
+        <planeGeometry args={[2.0, 0.625]} />
+        <meshBasicMaterial map={frontBadgeTexture} transparent />
+      </mesh>
     </group>
   )
 })
