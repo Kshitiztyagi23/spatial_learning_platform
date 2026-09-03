@@ -21,6 +21,19 @@ export default function App() {
       setIsSupportedScreen(window.innerWidth >= 1024)
     }
     window.addEventListener('resize', handleResize)
+
+    document.fonts.ready.then(() => {
+      const isLoaded = document.fonts.check('16px "Atkinson Hyperlegible Next Variable"')
+      const el = document.querySelector('.puzzle-name')
+      const computedFamily = el ? window.getComputedStyle(el).fontFamily : 'null'
+      console.log('[FONT_VERIFICATION]', JSON.stringify({
+        isLoaded,
+        fontsSize: document.fonts.size,
+        computedFamily,
+        fontFaces: Array.from(document.fonts).map(f => `${f.family} (${f.status})`)
+      }))
+    })
+
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
