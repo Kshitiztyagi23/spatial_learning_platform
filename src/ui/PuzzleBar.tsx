@@ -1,23 +1,17 @@
 import { useSession } from '../state/session'
-import type { Puzzle } from '../core/types'
 
-interface PuzzleBarProps {
-  allPuzzles: Puzzle[]
-}
-
-export function PuzzleBar({ allPuzzles }: PuzzleBarProps) {
-  const puzzle = useSession((state) => state.derived.puzzle)
+export function PuzzleBar() {
+  const puzzleName = useSession((state) => state.derived.puzzle.name)
+  const puzzleIndex = useSession((state) => state.puzzleIndex)
+  const puzzleCount = useSession((state) => state.puzzleCount)
   const clearBoard = useSession((state) => state.clearBoard)
-
-  const puzzleIndex = allPuzzles.findIndex((p) => p.id === puzzle.id)
-  const puzzleCount = allPuzzles.length
 
   return (
     <div className="puzzle-bar">
       <div className="puzzle-title-group">
-        <span className="puzzle-name">{puzzle.name}</span>
+        <span className="puzzle-name">{puzzleName}</span>
         <span className="puzzle-counter">
-          Puzzle {puzzleIndex >= 0 ? puzzleIndex + 1 : 1} of {puzzleCount}
+          Puzzle {puzzleIndex + 1} of {puzzleCount}
         </span>
       </div>
 
