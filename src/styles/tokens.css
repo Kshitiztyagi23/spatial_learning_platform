@@ -22,6 +22,9 @@
   /* Layout dimensions */
   --tray-width: 200px;
   --views-width: 240px;
+  --header-height: 56px;
+  --footer-height: 64px;
+  --app-min-height: 640px;
   --border-rule: 1px solid var(--rule);
   --focus-ring: 2px solid var(--ink);
 }
