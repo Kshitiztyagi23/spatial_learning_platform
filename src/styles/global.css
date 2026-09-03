@@ -274,6 +274,84 @@ html, body {
   line-height: 1.2;
 }
 
+/* Views Column and Cards */
+.views-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 12px 8px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.view-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.view-card {
+  background-color: var(--sheet);
+  border-radius: 8px;
+  padding: 6px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.view-grid {
+  user-select: none;
+}
+
+.view-cell {
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border-radius: 2px;
+}
+
+.view-cell.filled {
+  background-color: var(--filled);
+}
+
+.view-cell.empty {
+  background-color: var(--sheet);
+  border: 1px solid var(--rule);
+}
+
+.view-card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.view-card-label {
+  font-size: var(--font-size-sm);
+  color: var(--quiet);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+.view-card-status {
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.view-card-status.match {
+  color: var(--match);
+}
+
+.view-card-status.miss {
+  color: var(--miss);
+}
+
 /* Universal Focus Ring */
 :focus-visible {
   outline: var(--focus-ring);
