@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { derivePuzzle, loadPuzzles, validatePuzzle } from "../puzzle";
 import type { Puzzle } from "../types";
+import fixtureStep01 from "./fixtures/step-01.json";
 
-const step01: Puzzle = {
-  id: "step-01",
-  name: "Two bricks",
-  hint: "The top view shows where the bricks sit on the board.",
-  board: { width: 6, depth: 6, height: 5 },
-  solution: [
-    { instanceId: "a", typeId: "2x4", rotation: 0, origin: { x: 1, y: 0, z: 1 } },
-    { instanceId: "b", typeId: "2x2", rotation: 90, origin: { x: 1, y: 1, z: 1 } },
-  ],
-};
+const step01 = fixtureStep01 as Puzzle;
 
 describe("derivePuzzle", () => {
   it("tallies the tray from the solution", () => {
