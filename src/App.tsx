@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from './state/session'
 import { loadPuzzles } from './core/puzzle'
+import { Tray } from './ui/Tray'
 import { Stage } from './scene/Stage'
 
 export default function App() {
@@ -54,7 +55,9 @@ export default function App() {
         </div>
       </header>
       <main className="app-main">
-        <aside className="app-tray-region" aria-label="Brick tray" />
+        <aside className="app-tray-region" aria-label="Brick tray">
+          <Tray />
+        </aside>
         <section className="app-board-region" aria-label="3D board stage">
           <Stage />
         </section>
