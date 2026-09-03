@@ -87,7 +87,7 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Center Board Stage: flex 1 / 1fr (takes the rest) */
+/* Center Board Stage: 1fr (takes the rest) */
 .app-board-region {
   min-width: 0;
   background-color: var(--stage);
@@ -120,6 +120,52 @@ html, body {
   color: var(--ink);
   font-family: var(--font-family);
   font-size: var(--font-size-base);
+}
+
+/* Stage container and presets */
+.stage-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.stage-presets {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background-color: var(--sheet);
+  border: 1px solid var(--rule);
+  padding: 4px;
+  z-index: 10;
+  user-select: none;
+}
+
+.preset-button {
+  background-color: transparent;
+  color: var(--ink);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid transparent;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 0;
+  transition: background-color 0.1s ease;
+}
+
+.preset-button:hover {
+  background-color: var(--stage);
+}
+
+.preset-button.active {
+  background-color: var(--stage);
+  border-color: var(--rule);
 }
 
 /* Universal Focus Ring */

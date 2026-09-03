@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Stage } from './scene/Stage'
 
 export default function App() {
   const [isSupportedScreen, setIsSupportedScreen] = useState<boolean>(() => {
@@ -31,7 +32,9 @@ export default function App() {
       </header>
       <main className="app-main">
         <aside className="app-tray-region" aria-label="Brick tray" />
-        <section className="app-board-region" aria-label="3D board stage" />
+        <section className="app-board-region" aria-label="3D board stage">
+          <Stage />
+        </section>
         <aside className="app-views-region" aria-label="Orthographic views" />
       </main>
       <footer className="app-footer" aria-label="Toolbar">
