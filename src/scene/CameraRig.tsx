@@ -15,12 +15,14 @@ export function CameraRig({ board, activePreset, onUserDrag }: CameraRigProps) {
   const { camera, gl } = useThree()
 
   const centerX = (board.width - 1) / 2
-  const centerY = ((board.height || 5) * 0.5) / 2
+  // Look-at target centered on the board volume itself (around y = 0.5) so empty board is vertically centered
+  const centerY = 0.5
   const centerZ = (board.depth - 1) / 2
   const center = useRef(new THREE.Vector3(centerX, centerY, centerZ))
 
   const maxDimension = Math.max(board.width, board.depth)
-  const radius = maxDimension * 1.5 + 4
+  // Radius tuned so plate fills ~65% of the board stage's shorter dimension in 3D preset
+  const radius = maxDimension * 1.1 + 2.8
 
   // Angles: theta (azimuth), phi (polar)
   // Initial 3D view angles from prototype
