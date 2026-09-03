@@ -1,6 +1,6 @@
 # Ownership
 
-`C` = Claude Code. `A` = Antigravity. **Never edit a file you don't own.**
+Antigravity is retired. Claude Code owns the entire codebase — every file below, with no per-file split.
 
 ```
 brick-views/
@@ -11,44 +11,44 @@ brick-views/
 ├── OWNERSHIP.md
 ├── HANDOFF.md
 ├── scripts/
-│   └── validate-puzzles.ts          C
+│   └── validate-puzzles.ts
 └── src/
-    ├── main.tsx                     A
-    ├── App.tsx                      A
+    ├── main.tsx
+    ├── App.tsx
     ├── core/
-    │   ├── types.ts                 C  (frozen contract)
-    │   ├── pieces.ts                C
-    │   ├── geometry.ts              C  cellsFor, footprintFor, brickAtCell
-    │   ├── placement.ts             C  canPlace, canRemove
-    │   ├── projection.ts            C  projectCells, toGrids
-    │   ├── puzzle.ts                C  derivePuzzle, validate, loader
-    │   ├── check.ts                 C
-    │   └── __tests__/               C
+    │   ├── types.ts      (frozen contract)
+    │   ├── pieces.ts
+    │   ├── geometry.ts   cellsFor, footprintFor, brickAtCell
+    │   ├── placement.ts  canPlace, canRemove
+    │   ├── projection.ts projectCells, toGrids
+    │   ├── puzzle.ts     derivePuzzle, validate, loader
+    │   ├── check.ts
+    │   └── __tests__/
     ├── state/
-    │   └── session.ts               C
+    │   └── session.ts
     ├── data/puzzles/
-    │   └── *.json                   C
+    │   └── *.json
     ├── scene/
-    │   ├── Stage.tsx                A  canvas, lights, resize
-    │   ├── CameraRig.tsx            A  orbit + front/right/top/3D presets
-    │   ├── Baseplate.tsx            A  plate, grid lines, FRONT marker
-    │   ├── BrickMesh.tsx            A  box + four studs
-    │   ├── PlacedBricks.tsx         A
-    │   ├── GhostBrick.tsx           A
-    │   └── pointer.ts               A  raycast → cell
+    │   ├── Stage.tsx        canvas, lights, resize
+    │   ├── CameraRig.tsx    orbit + front/right/top/3D presets
+    │   ├── Baseplate.tsx    plate, grid lines, FRONT marker
+    │   ├── BrickMesh.tsx    box + four studs
+    │   ├── PlacedBricks.tsx
+    │   ├── GhostBrick.tsx
+    │   ├── SceneInteraction.tsx
+    │   └── pointer.ts       raycast → cell
     ├── ui/
-    │   ├── Tray.tsx                 A
-    │   ├── TrayItem.tsx             A
-    │   ├── ViewCard.tsx             A
-    │   ├── ViewsRow.tsx             A
-    │   ├── Toolbar.tsx              A
-    │   ├── PuzzleBar.tsx            A
-    │   └── Feedback.tsx             A
+    │   ├── Tray.tsx
+    │   ├── TrayItem.tsx
+    │   ├── IsometricBrickIcon.tsx
+    │   ├── ViewCard.tsx
+    │   ├── ViewsRow.tsx
+    │   ├── Toolbar.tsx
+    │   ├── PuzzleBar.tsx
+    │   └── Feedback.tsx
     └── styles/
-        ├── tokens.css               A
-        └── global.css               A
+        ├── tokens.css
+        └── global.css
 ```
 
-Anything unlisted: ask before creating it.
-
-If you need a change on the other side, append a dated entry to `HANDOFF.md` and keep working around it. The human resolves handoffs. Never edit a file you don't own.
+`HANDOFF.md` still exists as a running log of decisions and deferred work, not as a cross-agent handoff.
