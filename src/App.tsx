@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSession } from './state/session'
 import { loadPuzzles } from './core/puzzle'
 import { Tray } from './ui/Tray'
+import { ViewsRow } from './ui/ViewsRow'
 import { Stage } from './scene/Stage'
 
 export default function App() {
@@ -61,7 +62,9 @@ export default function App() {
         <section className="app-board-region" aria-label="3D board stage">
           <Stage />
         </section>
-        <aside className="app-views-region" aria-label="Orthographic views" />
+        <aside className="app-views-region" aria-label="Orthographic views">
+          <ViewsRow />
+        </aside>
       </main>
       <footer className="app-footer" aria-label="Toolbar">
         <span>Match all three views.</span>
