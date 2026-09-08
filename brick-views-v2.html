@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Brick Views — build the exact shape</title>
+<style>
+  :root{
+    --paper:#fbf3e4; --panel:#ffffff; --ink:#20304a; --muted:#7a8aa3;
+    --stud:#f4b71e; --stud-d:#c9930b; --blue:#1f7ae0; --blue-d:#155fb3;
+    --good:#1f9d55; --warn:#e8792b; --line:#e6ded0; --shadow:0 6px 0 rgba(32,48,74,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
+    font-family:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:700}
+  #app{display:flex;flex-direction:column;height:100%;max-width:940px;margin:0 auto;padding:11px;gap:9px}
+  .panel{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);border:2px solid #f0ead9}
+
+  .lvlbar{display:flex;align-items:center;gap:10px;padding:10px 12px}
+  .lvlbar .nav{width:40px;height:40px;flex:0 0 auto;font-size:18px}
+  .lvlbar .mid{flex:1;text-align:center;line-height:1.25}
+  .lvlbar .mid .t{font-size:16px}
+  .lvlbar .mid .tip{font-size:12.5px;color:var(--muted);font-weight:700}
+  .lvlbar .mid .t small{color:var(--blue)}
+
+  #refs{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;padding:11px}
+  .ref{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .ref .grid{display:grid;gap:3px;padding:7px;background:#eef2f8;border-radius:12px}
+  .cell{width:18px;height:18px;border-radius:5px;background:#fff;border:1.5px solid #dbe2ee}
+  .cell.on{background:var(--stud);border-color:var(--stud-d);box-shadow:inset 0 -3px 0 rgba(201,147,11,.55)}
+  .ref .lab{font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .ref .lab .tick{font-size:14px}
+
+  #stage{position:relative;flex:1;min-height:250px;border-radius:18px;overflow:hidden;
+    background:radial-gradient(120% 120% at 50% 0%,#eaf0fb,#dfe7f5 55%,#d3ddef);
+    border:2px solid var(--line);box-shadow:var(--shadow)}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #chip{position:absolute;left:12px;top:12px;background:#ffffffee;color:var(--ink);
+    padding:6px 12px;border-radius:999px;font-size:13.5px;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+  #chip.done{background:var(--good);color:#fff}
+  #banner{position:absolute;left:50%;top:12px;transform:translateX(-50%) translateY(-8px);
+    background:var(--good);color:#fff;padding:9px 16px;border-radius:999px;font-size:14.5px;
+    opacity:0;transition:.25s;pointer-events:none;box-shadow:0 4px 0 rgba(0,0,0,.12);max-width:88%;text-align:center}
+  #banner.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #banner.warn{background:var(--warn)}
+
+  .controls{display:flex;flex-direction:column;gap:9px;padding:11px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .rlabel{font-size:12px;color:var(--muted)}
+  button{font:inherit;font-weight:800;border:none;cursor:pointer;border-radius:13px;padding:11px 15px;
+    font-size:14px;color:var(--ink);background:#eef2f8;box-shadow:0 3px 0 #d3dbe8;transition:transform .08s,box-shadow .08s}
+  button:active{transform:translateY(3px);box-shadow:0 0 0 #d3dbe8}
+  button.view,button.seg{background:#fff;box-shadow:0 3px 0 #e0e6f0}
+  button.seg.active{background:var(--blue);color:#fff;box-shadow:0 3px 0 var(--blue-d)}
+  button.go{background:var(--stud);color:#3d2c00;box-shadow:0 3px 0 var(--stud-d)}
+  button.go:active{box-shadow:0 0 0 var(--stud-d)}
+  button.pulse{animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .hint{font-size:12px;color:var(--muted);text-align:center;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="panel lvlbar">
+    <button class="view nav" id="prev">◀</button>
+    <div class="mid">
+      <div class="t">🧱 <small id="lvlNo">Level 1 / 6</small> · <span id="lvlName">Flat corner</span></div>
+      <div class="tip" id="lvlTip">Match all three views by building the exact solid.</div>
+    </div>
+    <button class="view nav" id="next">▶</button>
+  </div>
+
+  <div class="panel"><div id="refs"></div></div>
+
+  <div id="stage" class="panel" style="padding:0">
+    <div id="chip">Bricks 0 / 0</div>
+    <div id="banner"></div>
+  </div>
+
+  <div class="panel controls">
+    <div class="row">
+      <span class="rlabel">Look from:</span>
+      <button class="view" data-view="front">Front</button>
+      <button class="view" data-view="right">Right</button>
+      <button class="view" data-view="top">Top</button>
+      <button class="view" data-view="iso">3D</button>
+      <button class="view" data-spin="-1">⟲</button>
+      <button class="view" data-spin="1">⟳</button>
+    </div>
+    <div class="row">
+      <button class="seg active" id="mBuild">🧱 Build</button>
+      <button class="seg" id="mErase">🩹 Erase</button>
+      <button class="go" id="check">Check</button>
+      <button id="clear">Clear</button>
+    </div>
+    <div class="hint">Drag to turn • Tap board to place • Tap a brick top to stack • Front side is marked</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ================= LEVELS (seed shapes; grid x=right, y=up, z=toward FRONT) ================= */
+const LEVELS = [
+  {name:"Flat corner", tip:"Careful — the top view is not the same as the front!",
+   seed:[[0,0,0],[1,0,0],[0,0,1]]},
+  {name:"Standing corner", tip:"Now the shape stands up. Two views, one plane.",
+   seed:[[0,0,0],[1,0,0],[0,1,0]]},
+  {name:"Staircase", tip:"One brick thick. The side view tells the whole story.",
+   seed:[[0,0,0],[0,1,0],[0,2,0],[0,0,1],[0,1,1],[0,0,2]]},
+  {name:"L-tower", tip:"Height and depth together in one shape.",
+   seed:[[0,0,0],[1,0,0],[2,0,0],[0,1,0],[0,2,0],[0,0,1]]},
+  {name:"Wall & floor", tip:"Two bricks wide. Some views are solid rectangles.",
+   seed:[[0,0,0],[1,0,0],[0,0,1],[1,0,1],[0,1,0],[1,1,0],[0,2,0],[1,2,0]]},
+  {name:"Hidden brick", tip:"The full solid can hide a brick you don't see in ANY single view.",
+   seed:[[0,0,0],[1,0,0],[2,0,0],[0,0,1],[1,0,1],[0,0,2],[0,1,0],[1,1,0],[0,1,1],[0,2,0]]},
+];
+const HEIGHT=6, BRICKS=[0xE3000B,0x1f7ae0,0xf4b71e,0x2c9e4b,0xf57c00,0x8e44ad];
+
+/* ================= geometry of shapes ================= */
+function normalize(cells){let mx=1/0,my=1/0,mz=1/0;
+  cells.forEach(c=>{mx=Math.min(mx,c[0]);my=Math.min(my,c[1]);mz=Math.min(mz,c[2]);});
+  return cells.map(c=>[c[0]-mx,c[1]-my,c[2]-mz]);}
+function project(cells){const n=normalize(cells),front=new Set(),side=new Set(),top=new Set();
+  n.forEach(([x,y,z])=>{front.add(x+','+y);side.add(z+','+y);top.add(x+','+z);});return{front,side,top,cells:n};}
+const setEq=(a,b)=>{if(a.size!==b.size)return false;for(const v of a)if(!b.has(v))return false;return true;};
+function bounds(cells){let X=0,Y=0,Z=0;cells.forEach(([x,y,z])=>{X=Math.max(X,x);Y=Math.max(Y,y);Z=Math.max(Z,z);});return{X,Y,Z};}
+/* the full solid consistent with a seed's three views (unique, so exact-match is fair) */
+function hull(seed){const P=project(seed),{front,side,top}=P,b=bounds(P.cells),out=[];
+  for(let x=0;x<=b.X;x++)for(let y=0;y<=b.Y;y++)for(let z=0;z<=b.Z;z++)
+    if(front.has(x+','+y)&&side.has(z+','+y)&&top.has(x+','+z))out.push([x,y,z]);
+  return out;}
+
+/* ================= scene ================= */
+const stage=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.1,120);
+scene.add(new THREE.HemisphereLight(0xffffff,0x9aa7bd,1.0));
+const sun=new THREE.DirectionalLight(0xffffff,0.55);sun.position.set(6,12,8);scene.add(sun);
+
+/* board (rebuilt each level to frame nicely) */
+let BOARD=5, plate, center=new THREE.Vector3(), radius=8;
+const boardGroup=new THREE.Group();scene.add(boardGroup);
+function buildBoard(n){
+  while(boardGroup.children.length){const c=boardGroup.children.pop();boardGroup.remove(c);}
+  BOARD=n;
+  plate=new THREE.Mesh(new THREE.BoxGeometry(n,0.4,n),new THREE.MeshStandardMaterial({color:0xd6deea,roughness:.95}));
+  plate.position.set((n-1)/2,-0.2,(n-1)/2);plate.name='plate';boardGroup.add(plate);
+  const grid=new THREE.GridHelper(n,n,0x9db0cd,0xc3cee0);grid.position.set((n-1)/2,0.002,(n-1)/2);boardGroup.add(grid);
+  const c=document.createElement('canvas');c.width=256;c.height=64;const g=c.getContext('2d');
+  g.fillStyle='#1f7ae0';g.font='bold 40px Nunito,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('FRONT',128,34);
+  const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));
+  spr.scale.set(1.7,0.42,1);spr.position.set((n-1)/2,0.05,n-0.4);boardGroup.add(spr);
+}
+
+/* bricks */
+const bricks=new Map();const brickGroup=new THREE.Group();scene.add(brickGroup);
+const boxGeo=new THREE.BoxGeometry(0.94,0.94,0.94),studGeo=new THREE.CylinderGeometry(0.17,0.17,0.14,18);
+let colorIdx=0;const key=(x,y,z)=>x+','+y+','+z;
+function makeBrick(x,y,z,color){const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.45,metalness:.02});g.add(new THREE.Mesh(boxGeo,mat));
+  [[-.24,-.24],[.24,-.24],[-.24,.24],[.24,.24]].forEach(o=>{const s=new THREE.Mesh(studGeo,mat);s.position.set(o[0],0.54,o[1]);s.raycast=()=>{};g.add(s);});
+  g.position.set(x,y+0.5,z);g.userData={gx:x,gy:y,gz:z,mat};g.children[0].userData.brick=g;return g;}
+function addBrick(x,y,z){if(x<0||z<0||x>=BOARD||z>=BOARD||y<0||y>=HEIGHT)return;
+  const k=key(x,y,z);if(bricks.has(k))return;const m=makeBrick(x,y,z,BRICKS[colorIdx++%BRICKS.length]);bricks.set(k,m);brickGroup.add(m);updateCount();}
+function removeBrick(m){const{gx,gy,gz}=m.userData;bricks.delete(key(gx,gy,gz));brickGroup.remove(m);updateCount();}
+function clearBricks(){[...bricks.values()].forEach(m=>brickGroup.remove(m));bricks.clear();updateCount();}
+
+/* ghost + erase highlight */
+const ghost=new THREE.Mesh(new THREE.BoxGeometry(0.99,0.99,0.99),new THREE.MeshBasicMaterial({color:0x1f9d55,transparent:true,opacity:.32}));
+ghost.visible=false;scene.add(ghost);let hl=null;
+function highlight(b){if(hl===b)return;clearHL();hl=b;b.userData.mat.emissive=new THREE.Color(0xff4444);b.userData.mat.emissiveIntensity=.6;}
+function clearHL(){if(hl){hl.userData.mat.emissive=new THREE.Color(0);hl.userData.mat.emissiveIntensity=0;hl=null;}}
+
+/* camera orbit */
+let theta=Math.PI*0.24,phi=Math.PI*0.34,tTheta=theta,tPhi=phi;
+function updateCam(){theta+=(tTheta-theta)*0.18;phi+=(tPhi-phi)*0.18;const sp=Math.sin(phi);
+  camera.position.set(center.x+radius*sp*Math.sin(theta),center.y+radius*Math.cos(phi),center.z+radius*sp*Math.cos(theta));camera.lookAt(center);}
+function preset(v){if(v==='front'){tTheta=0;tPhi=Math.PI/2-0.03;}else if(v==='right'){tTheta=Math.PI/2;tPhi=Math.PI/2-0.03;}
+  else if(v==='top'){tPhi=0.06;}else{tTheta=Math.PI*0.24;tPhi=Math.PI*0.34;}}
+
+/* ================= level state ================= */
+let li=0, target=[], Tset=null, needed=0, solved=false;
+function refGrid(kind){const{X,Y,Z}=bounds(Tset.cells),rows=[];
+  if(kind==='front'){for(let y=Y;y>=0;y--){const r=[];for(let x=0;x<=X;x++)r.push(Tset.front.has(x+','+y));rows.push(r);}}
+  else if(kind==='top'){for(let z=0;z<=Z;z++){const r=[];for(let x=0;x<=X;x++)r.push(Tset.top.has(x+','+z));rows.push(r);}}
+  else{for(let y=Y;y>=0;y--){const r=[];for(let z=Z;z>=0;z--)r.push(Tset.side.has(z+','+y));rows.push(r);}}
+  return rows;}
+const refsEl=document.getElementById('refs');
+const refDefs=[['front','Front'],['side','Right side'],['top','Top']];
+function renderRefs(status){refsEl.innerHTML='';
+  refDefs.forEach(([k,label])=>{const rows=refGrid(k),wrap=document.createElement('div');wrap.className='ref';
+    const grid=document.createElement('div');grid.className='grid';grid.style.gridTemplateColumns=`repeat(${rows[0].length},18px)`;
+    rows.forEach(r=>r.forEach(on=>{const c=document.createElement('div');c.className='cell'+(on?' on':'');grid.appendChild(c);}));
+    const lab=document.createElement('div');lab.className='lab';lab.textContent=label;
+    if(status){const t=document.createElement('span');t.className='tick';t.textContent=status[k]?'✅':'❌';lab.appendChild(t);}
+    wrap.appendChild(grid);wrap.appendChild(lab);refsEl.appendChild(wrap);});}
+
+const chip=document.getElementById('chip');
+function updateCount(){const n=bricks.size;chip.textContent=`Bricks ${n} / ${needed}`;chip.classList.toggle('done',solved&&n===needed);}
+
+function loadLevel(i){
+  li=(i+LEVELS.length)%LEVELS.length;solved=false;
+  const L=LEVELS[li];target=hull(L.seed);Tset=project(target);needed=target.length;
+  const b=bounds(target);
+  buildBoard(Math.min(6,Math.max(4,Math.max(b.X,b.Z)+3)));
+  center.set((BOARD-1)/2,(b.Y+1)/2,(BOARD-1)/2);radius=Math.max(BOARD*1.5,b.Y*1.6+5);
+  preset('iso');
+  clearBricks();renderRefs();hideBanner();
+  document.getElementById('lvlNo').textContent=`Level ${li+1} / ${LEVELS.length}`;
+  document.getElementById('lvlName').textContent=L.name;
+  document.getElementById('lvlTip').textContent=L.tip;
+  document.getElementById('next').classList.remove('pulse');
+  mode='build';mBuild.classList.add('active');mErase.classList.remove('active');
+}
+
+/* ================= interaction ================= */
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let mode='build',down=null;const dom=renderer.domElement;
+function setNDC(e){const r=dom.getBoundingClientRect();ndc.x=((e.clientX-r.left)/r.width)*2-1;ndc.y=-((e.clientY-r.top)/r.height)*2+1;}
+function candidate(){ray.setFromCamera(ndc,camera);const hits=ray.intersectObjects([plate,...brickGroup.children],true);
+  if(!hits.length)return null;const h=hits[0];
+  if(h.object===plate){const x=Math.round(h.point.x),z=Math.round(h.point.z);if(x<0||z<0||x>=BOARD||z>=BOARD)return null;return{x,y:0,z};}
+  const b=h.object.userData.brick;if(!b)return null;if(mode==='erase')return{erase:b};
+  const n=h.face.normal.clone().transformDirection(h.object.matrixWorld).round();
+  return{x:b.userData.gx+n.x,y:b.userData.gy+n.y,z:b.userData.gz+n.z};}
+function updateGhost(){const c=candidate();if(!c){ghost.visible=false;clearHL();return;}
+  if(c.erase){highlight(c.erase);ghost.visible=false;return;}clearHL();
+  if(c.x<0||c.z<0||c.x>=BOARD||c.z>=BOARD||c.y<0||c.y>=HEIGHT||bricks.has(key(c.x,c.y,c.z))){ghost.visible=false;return;}
+  ghost.position.set(c.x,c.y+0.5,c.z);ghost.visible=true;}
+dom.addEventListener('pointerdown',e=>{dom.setPointerCapture(e.pointerId);down={x:e.clientX,y:e.clientY,moved:false};});
+dom.addEventListener('pointermove',e=>{setNDC(e);if(down){const dx=e.clientX-down.x,dy=e.clientY-down.y;
+  if(Math.abs(dx)+Math.abs(dy)>4)down.moved=true;
+  if(down.moved){tTheta-=dx*0.008;tPhi=Math.min(Math.PI-0.05,Math.max(0.05,tPhi-dy*0.008));down.x=e.clientX;down.y=e.clientY;ghost.visible=false;clearHL();}}
+  else updateGhost();});
+dom.addEventListener('pointerup',e=>{if(down&&!down.moved){setNDC(e);const c=candidate();
+  if(c){if(c.erase)removeBrick(c.erase);else if(!(c.x<0||c.z<0||c.x>=BOARD||c.z>=BOARD||c.y<0||c.y>=HEIGHT))addBrick(c.x,c.y,c.z);hideBanner();renderRefs();}}
+  down=null;updateGhost();});
+dom.addEventListener('pointerleave',()=>{ghost.visible=false;clearHL();});
+
+/* ================= buttons ================= */
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>preset(b.dataset.view));
+document.querySelectorAll('[data-spin]').forEach(b=>b.onclick=()=>{tTheta+=(+b.dataset.spin)*Math.PI/2;});
+const mBuild=document.getElementById('mBuild'),mErase=document.getElementById('mErase');
+mBuild.onclick=()=>{mode='build';mBuild.classList.add('active');mErase.classList.remove('active');clearHL();};
+mErase.onclick=()=>{mode='erase';mErase.classList.add('active');mBuild.classList.remove('active');ghost.visible=false;};
+document.getElementById('clear').onclick=()=>{clearBricks();hideBanner();renderRefs();};
+document.getElementById('prev').onclick=()=>loadLevel(li-1);
+document.getElementById('next').onclick=()=>loadLevel(li+1);
+
+const banner=document.getElementById('banner');
+function showBanner(t,warn){banner.textContent=t;banner.className='show'+(warn?' warn':'');}
+function hideBanner(){banner.className='';}
+document.getElementById('check').onclick=()=>{
+  const cur=[...bricks.values()].map(m=>[m.userData.gx,m.userData.gy,m.userData.gz]);
+  if(!cur.length){showBanner('Place some bricks first!',true);return;}
+  const P=project(cur);
+  const status={front:setEq(P.front,Tset.front),side:setEq(P.side,Tset.side),top:setEq(P.top,Tset.top)};
+  renderRefs(status);
+  const curSet=new Set(normalize(cur).map(c=>c.join(','))), tgtSet=new Set(normalize(target).map(c=>c.join(',')));
+  const exact=setEq(curSet,tgtSet);
+  const viewsOk=status.front&&status.side&&status.top;
+  if(exact){solved=true;updateCount();showBanner(li<LEVELS.length-1?'🎉 Exactly right! Tap ▶ for the next level':'🎉 Exactly right — you finished all levels!',false);
+    document.getElementById('next').classList.add('pulse');}
+  else if(viewsOk){showBanner('Your 3 views match, but the solid isn\u2019t complete — look for hidden bricks (check the count).',true);}
+  else{showBanner('Not yet — fix the views marked ❌',true);}
+};
+
+/* ================= go ================= */
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(stage);resize();
+loadLevel(0);
+(function loop(){updateCam();renderer.render(scene,camera);requestAnimationFrame(loop);})();
+</script>
+</body>
+</html>
