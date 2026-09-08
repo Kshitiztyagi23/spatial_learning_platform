@@ -1,0 +1,12 @@
+{
+  "id": "step-05",
+  "name": "Two steps",
+  "hint": "One side of the plate is taller than the other.",
+  "board": { "width": 6, "depth": 6, "height": 5 },
+  "solution": [
+    { "instanceId": "a", "typeId": "2x4", "rotation": 0, "origin": { "x": 0, "y": 0, "z": 0 } },
+    { "instanceId": "b", "typeId": "2x4", "rotation": 0, "origin": { "x": 2, "y": 0, "z": 0 } },
+    { "instanceId": "c", "typeId": "2x2", "rotation": 0, "origin": { "x": 2, "y": 1, "z": 0 } },
+    { "instanceId": "d", "typeId": "2x2", "rotation": 0, "origin": { "x": 2, "y": 1, "z": 2 } }
+  ]
+}
