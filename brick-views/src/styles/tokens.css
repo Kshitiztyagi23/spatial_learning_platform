@@ -1,0 +1,30 @@
+:root {
+  /* Surface and ink palette */
+  --desk: #DCE3EA;
+  --stage: #E8EDF3;
+  --sheet: #FFFFFF;
+  --rule: #B7C1CC;
+  --ink: #1B2231;
+  --quiet: #55616F;
+  --filled: #48566A;
+  --match: #1F8A4C;
+  --miss: #B8502E;
+
+  /* Typography */
+  --font-family: 'Atkinson Hyperlegible Next Variable', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 18px;
+  --font-size-lg: 24px;
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  /* Layout dimensions */
+  --tray-width: 200px;
+  --views-width: 240px;
+  --header-height: 56px;
+  --footer-height: 64px;
+  --app-min-height: 640px;
+  --border-rule: 1px solid var(--rule);
+  --focus-ring: 2px solid var(--ink);
+}
