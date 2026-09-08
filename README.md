@@ -1,6 +1,6 @@
 # Spatial Learning Platform
 
-A kid rebuilds a 3D shape from three flat views (front, right, top) using bricks from a tray, then checks their work. Built for ages 6-10, desktop only, no scoring or accounts, just the puzzle.
+A kid rebuilds a 3D shape from three flat views (front, right, top) using bricks from a tray, then checks their work. Built for ages 14+, desktop only, no scoring or accounts, just the puzzle.
 
 The app lives in [`brick-views/`](./brick-views). Everything else here is planning and reference material:
 
