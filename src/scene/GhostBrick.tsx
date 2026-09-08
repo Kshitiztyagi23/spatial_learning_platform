@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useSession } from '../state/session'
 import { canPlace } from '../core/placement'
-import { footprintFor } from '../core/geometry'
+import { footprintFor, originForPivot } from '../core/geometry'
 import type { Vec3 } from '../core/types'
 
 interface GhostBrickProps {
@@ -18,7 +18,9 @@ export function GhostBrick({ candidate }: GhostBrickProps) {
   const remaining = useSession((state) => state.remaining)
   const mode = useSession((state) => state.mode)
 
-  const isVisible = Boolean(candidate && selectedType && mode === 'build')
+  const isVisible = Boolean(
+    candidate && selectedType && mode === 'build' && remaining[selectedType] > 0
+  )
 
   const { w, d } = useMemo(() => {
     if (!selectedType) return { w: 1, d: 1 }
@@ -41,15 +43,19 @@ export function GhostBrick({ candidate }: GhostBrickProps) {
     return null
   }
 
+  // candidate is the fixed pivot cell; each rotation sweeps the footprint into
+  // a different quadrant around it rather than spinning in place (see originForPivot)
+  const origin = originForPivot(selectedType, rotation, candidate)
+
   // Ask store canPlace path to determine legality — never re-implement rules here
-  const result = canPlace(placed, board, remaining, selectedType, rotation, candidate)
+  const result = canPlace(placed, board, remaining, selectedType, rotation, origin)
   const isLegal = result.ok
   // Tokens: --match #1F8A4C when legal, --miss #B8502E when illegal
   const color = isLegal ? '#1F8A4C' : '#B8502E'
 
-  const centerX = candidate.x + (w - 1) / 2
-  const centerY = candidate.y + 0.5
-  const centerZ = candidate.z + (d - 1) / 2
+  const centerX = origin.x + (w - 1) / 2
+  const centerY = origin.y + 0.5
+  const centerZ = origin.z + (d - 1) / 2
 
   return (
     <group position={[centerX, centerY, centerZ]} raycast={noopRaycast}>

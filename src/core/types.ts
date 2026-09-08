@@ -60,4 +60,6 @@ export interface CheckResult {
   views: Record<ViewName, boolean>;
   bricksPlaced: number;
   bricksTotal: number;
+  /** instanceIds of placed bricks occupying a cell the solution doesn't use */
+  wrongInstanceIds: string[];
 }

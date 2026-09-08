@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brickAtCell, cellsFor, footprintFor } from "../geometry";
+import { brickAtCell, cellsFor, footprintFor, originForPivot } from "../geometry";
 import type { Placement } from "../types";
 
 describe("footprintFor", () => {
@@ -33,6 +33,23 @@ describe("cellsFor", () => {
   it("places every cell at the origin's y", () => {
     const cells = cellsFor("2x2", 0, { x: 0, y: 2, z: 0 });
     expect(cells.every((c) => c.y === 2)).toBe(true);
+  });
+});
+
+describe("originForPivot", () => {
+  const pivot = { x: 0, y: 0, z: 0 };
+
+  it("sweeps a 2x4 through all four quadrants around the pivot, returning to start at 360", () => {
+    expect(originForPivot("2x4", 0, pivot)).toEqual({ x: 0, y: 0, z: 0 });
+    expect(originForPivot("2x4", 90, pivot)).toEqual({ x: 0, y: 0, z: -2 });
+    expect(originForPivot("2x4", 180, pivot)).toEqual({ x: -2, y: 0, z: -4 });
+    expect(originForPivot("2x4", 270, pivot)).toEqual({ x: -4, y: 0, z: 0 });
+  });
+
+  it("puts each rotation in a different quadrant around the pivot", () => {
+    const origins = ([0, 90, 180, 270] as const).map((r) => originForPivot("2x4", r, pivot));
+    const unique = new Set(origins.map((o) => `${o.x},${o.z}`));
+    expect(unique.size).toBe(4);
   });
 });
 
