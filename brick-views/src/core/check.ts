@@ -1,46 +1,27 @@
-import { cellsFor } from "./geometry";
-import { projectCells } from "./projection";
-import type { CheckResult, DerivedPuzzle, Placement, ViewName, Vec3 } from "./types";
+import { cellKey, cellsFor, minCorner, parseCellKey, setsEqual } from "./geometry";
+import { diagnose } from "./diagnose";
+import { PIECES } from "./pieces";
+import { projectCells, projectColors } from "./projection";
+import type { CheckResult, ColorId, DerivedPuzzle, Placement, ViewName, Vec3 } from "./types";
 
-function minCorner(cells: Vec3[]): Vec3 {
-  if (cells.length === 0) return { x: 0, y: 0, z: 0 };
-  return {
-    x: Math.min(...cells.map((c) => c.x)),
-    y: Math.min(...cells.map((c) => c.y)),
-    z: Math.min(...cells.map((c) => c.z)),
-  };
+function withColor(cells: Vec3[], typeId: Placement["typeId"]): { cell: Vec3; color: ColorId }[] {
+  return cells.map((cell) => ({ cell, color: PIECES[typeId].color }));
 }
 
-function shiftedKey(cell: Vec3, offset: Vec3): string {
-  return `${cell.x - offset.x},${cell.y - offset.y},${cell.z - offset.z}`;
-}
-
-function normalize(cells: Vec3[]): Set<string> {
-  const offset = minCorner(cells);
-  return new Set(cells.map((c) => shiftedKey(c, offset)));
-}
-
-/** instanceIds of placed bricks with at least one cell not in targetNorm */
-function findWrongInstances(placed: Placement[], placedOffset: Vec3, targetNorm: Set<string>): string[] {
-  const wrong: string[] = [];
-  for (const p of placed) {
-    const cells = cellsFor(p.typeId, p.rotation, p.origin);
-    if (cells.some((c) => !targetNorm.has(shiftedKey(c, placedOffset)))) {
-      wrong.push(p.instanceId);
-    }
-  }
-  return wrong;
-}
-
-function parseCell(key: string): Vec3 {
-  const [x, y, z] = key.split(",").map(Number);
-  return { x: x ?? 0, y: y ?? 0, z: z ?? 0 };
-}
-
-function setsEqual(a: Set<string>, b: Set<string>): boolean {
-  if (a.size !== b.size) return false;
-  for (const v of a) if (!b.has(v)) return false;
-  return true;
+function aligned(placed: Placement[], target: Placement[]) {
+  const placedRaw = placed.flatMap((p) => withColor(cellsFor(p.typeId, p.rotation, p.origin), p.typeId));
+  const targetRaw = target.flatMap((p) => withColor(cellsFor(p.typeId, p.rotation, p.origin), p.typeId));
+  const placedOffset = minCorner(placedRaw.map((c) => c.cell));
+  const targetOffset = minCorner(targetRaw.map((c) => c.cell));
+  const placedAligned = placedRaw.map(({ cell, color }) => ({
+    cell: {
+      x: cell.x - placedOffset.x + targetOffset.x,
+      y: cell.y - placedOffset.y + targetOffset.y,
+      z: cell.z - placedOffset.z + targetOffset.z,
+    },
+    color,
+  }));
+  return { placedAligned, targetRaw };
 }
 
 export function check(placed: Placement[], target: DerivedPuzzle): CheckResult {
@@ -53,38 +34,70 @@ export function check(placed: Placement[], target: DerivedPuzzle): CheckResult {
       views: { front: false, right: false, top: false },
       bricksPlaced,
       bricksTotal,
-      wrongInstanceIds: [],
+      diagnoses: [],
     };
   }
 
-  const placedCells = placed.flatMap((p) => cellsFor(p.typeId, p.rotation, p.origin));
-  const targetCells = target.puzzle.solution.flatMap((p) => cellsFor(p.typeId, p.rotation, p.origin));
+  const { placedAligned, targetRaw } = aligned(placed, target.puzzle.solution);
+  const placedCellKeys = new Set(placedAligned.map((c) => cellKey(c.cell)));
+  const targetCellKeys = new Set(targetRaw.map((c) => cellKey(c.cell)));
 
-  const placedOffset = minCorner(placedCells);
-  const placedNorm = new Set(placedCells.map((c) => shiftedKey(c, placedOffset)));
-  const targetNorm = normalize(targetCells);
+  if (target.puzzle.monochrome) {
+    // Colour is never graded here — plain cell-set equality, exactly the
+    // pre-colour rule.
+    if (setsEqual(placedCellKeys, targetCellKeys)) {
+      return {
+        outcome: "solved",
+        views: { front: true, right: true, top: true },
+        bricksPlaced,
+        bricksTotal,
+        diagnoses: [],
+      };
+    }
 
-  if (setsEqual(placedNorm, targetNorm)) {
+    const placedViews = projectCells([...placedCellKeys].map(parseCellKey));
+    const targetViews = projectCells([...targetCellKeys].map(parseCellKey));
+    const views: Record<ViewName, boolean> = {
+      front: setsEqual(placedViews.front, targetViews.front),
+      right: setsEqual(placedViews.right, targetViews.right),
+      top: setsEqual(placedViews.top, targetViews.top),
+    };
+    const outcome = views.front && views.right && views.top ? "hidden-brick" : "views-mismatch";
+    return { outcome, views, bricksPlaced, bricksTotal, diagnoses: diagnose(placed, target) };
+  }
+
+  // Colour-aware: solved iff the normalised cell→colour maps are equal —
+  // equal maps imply equal cell sets, so this replaces (not adds to) the
+  // cell-set check above.
+  const placedColorMap = new Map(placedAligned.map((c) => [cellKey(c.cell), c.color]));
+  const targetColorMap = new Map(targetRaw.map((c) => [cellKey(c.cell), c.color]));
+  const solved =
+    placedColorMap.size === targetColorMap.size &&
+    [...placedColorMap].every(([k, v]) => targetColorMap.get(k) === v);
+
+  if (solved) {
     return {
       outcome: "solved",
       views: { front: true, right: true, top: true },
       bricksPlaced,
       bricksTotal,
-      wrongInstanceIds: [],
+      diagnoses: [],
     };
   }
 
-  const placedViews = projectCells([...placedNorm].map(parseCell));
-  const targetViews = projectCells([...targetNorm].map(parseCell));
-
+  const placedViews = projectColors(placedAligned);
+  const targetViews = projectColors(targetRaw);
   const views: Record<ViewName, boolean> = {
-    front: setsEqual(placedViews.front, targetViews.front),
-    right: setsEqual(placedViews.right, targetViews.right),
-    top: setsEqual(placedViews.top, targetViews.top),
+    front: mapsEqual(placedViews.front, targetViews.front),
+    right: mapsEqual(placedViews.right, targetViews.right),
+    top: mapsEqual(placedViews.top, targetViews.top),
   };
-
   const outcome = views.front && views.right && views.top ? "hidden-brick" : "views-mismatch";
-  const wrongInstanceIds = findWrongInstances(placed, placedOffset, targetNorm);
+  return { outcome, views, bricksPlaced, bricksTotal, diagnoses: diagnose(placed, target) };
+}
 
-  return { outcome, views, bricksPlaced, bricksTotal, wrongInstanceIds };
+function mapsEqual(a: Map<string, ColorId>, b: Map<string, ColorId>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [k, v] of a) if (b.get(k) !== v) return false;
+  return true;
 }

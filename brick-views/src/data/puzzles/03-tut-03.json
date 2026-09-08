@@ -1,0 +1,11 @@
+{
+  "id": "tut-03",
+  "name": "Turn one to fit",
+  "hint": "One brick needs a turn to fit on the plate.",
+  "board": { "width": 6, "depth": 6, "height": 5 },
+  "solution": [
+    { "instanceId": "a", "typeId": "2x4-yellow", "rotation": 0, "origin": { "x": 0, "y": 0, "z": 0 } },
+    { "instanceId": "b", "typeId": "2x4-yellow", "rotation": 0, "origin": { "x": 2, "y": 0, "z": 0 } },
+    { "instanceId": "c", "typeId": "2x3-blue", "rotation": 90, "origin": { "x": 0, "y": 0, "z": 4 } }
+  ]
+}

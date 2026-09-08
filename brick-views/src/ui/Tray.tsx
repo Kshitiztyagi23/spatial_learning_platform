@@ -1,19 +1,19 @@
 import { useSession } from '../state/session'
-import type { PieceTypeId } from '../core/types'
+import { orderedTypeIds } from '../core/pieces'
 import { TrayItem } from './TrayItem'
 
 export function Tray() {
   const tray = useSession((state) => state.derived.tray)
+  const monochrome = useSession((state) => !!state.derived.puzzle.monochrome)
   const remaining = useSession((state) => state.remaining)
   const selectedType = useSession((state) => state.selectedType)
   const selectType = useSession((state) => state.selectType)
 
-  // One item per type present in the puzzle (derived.tray > 0)
-  const presentTypes = (['2x4', '2x3', '2x2'] as PieceTypeId[]).filter(
-    (typeId) => (tray[typeId] ?? 0) > 0
-  )
+  // Every type this puzzle uses at all, largest footprint first, colour as
+  // the tie-break — stays in the list (zero-count, disabled) once emptied.
+  const presentTypes = orderedTypeIds(tray)
 
-  const handleSelect = (typeId: PieceTypeId) => {
+  const handleSelect = (typeId: (typeof presentTypes)[number]) => {
     // Selecting sets selectedType in the store; clicking selected deselects
     selectType(selectedType === typeId ? null : typeId)
   }
@@ -28,6 +28,7 @@ export function Tray() {
             remaining={remaining[typeId] ?? 0}
             isSelected={selectedType === typeId}
             onSelect={handleSelect}
+            monochrome={monochrome}
           />
         ))}
       </div>

@@ -3,9 +3,7 @@ import { useSession } from "../../state/session";
 import { loadPuzzles } from "../puzzle";
 import type { PieceTypeId } from "../types";
 
-const ALL_TYPES: PieceTypeId[] = ["2x2", "2x3", "2x4"];
-
-describe("solve-all: every product puzzle solves through store actions alone", () => {
+describe("solve-all: every puzzle solves through store actions alone", () => {
   for (const puzzle of loadPuzzles()) {
     it(`solves ${puzzle.id} (${puzzle.name})`, () => {
       useSession.getState().loadPuzzle(puzzle.id);
@@ -31,7 +29,7 @@ describe("solve-all: every product puzzle solves through store actions alone", (
 
       expect(state.lastCheck?.outcome, `puzzle "${puzzle.id}" did not solve`).toBe("solved");
 
-      for (const typeId of ALL_TYPES) {
+      for (const typeId of Object.keys(state.derived.tray) as PieceTypeId[]) {
         expect(
           state.remaining[typeId],
           `puzzle "${puzzle.id}": ${typeId} tray did not empty`,

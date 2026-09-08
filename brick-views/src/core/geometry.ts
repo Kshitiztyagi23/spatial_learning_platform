@@ -49,3 +49,27 @@ export function brickAtCell(placed: Placement[], cell: Vec3): Placement | null {
   }
   return null;
 }
+
+export function cellKey(cell: Vec3): string {
+  return `${cell.x},${cell.y},${cell.z}`;
+}
+
+export function parseCellKey(key: string): Vec3 {
+  const [x, y, z] = key.split(",").map(Number);
+  return { x: x ?? 0, y: y ?? 0, z: z ?? 0 };
+}
+
+export function minCorner(cells: Vec3[]): Vec3 {
+  if (cells.length === 0) return { x: 0, y: 0, z: 0 };
+  return {
+    x: Math.min(...cells.map((c) => c.x)),
+    y: Math.min(...cells.map((c) => c.y)),
+    z: Math.min(...cells.map((c) => c.z)),
+  };
+}
+
+export function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}

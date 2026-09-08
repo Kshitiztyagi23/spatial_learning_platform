@@ -2,6 +2,11 @@
 
 Read this before starting. Both agents build against it. Neither agent may change anything in this file without the human's approval.
 
+> **Amended 2026-09-09, human-approved — read [`03-COLOR-AND-HINTS-PLAN.md`](./03-COLOR-AND-HINTS-PLAN.md) alongside this file.**
+> That plan supersedes parts of §1, §3, §5, §5a and the `types.ts` contract in §6. In short:
+> §1's out-of-scope list and §7's file-ownership rule are lifted; §3's "colour is fixed per type" is replaced by shape × colour piece ids, and colour now decides correctness; §5a's automatic red tint on wrong bricks is demoted to an opt-in, single-cell "Show me" four failures deep; and the view cards become real orthographic renders rather than silhouette grids.
+> §2 (coordinates), §5's "say nothing about which brick is wrong", and §9 (writing rules) are unchanged and still binding.
+
 ---
 
 ## 1. What the app is

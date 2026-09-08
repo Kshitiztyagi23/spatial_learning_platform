@@ -302,26 +302,6 @@ html, body {
   transition: border-color 0.15s ease;
 }
 
-.view-grid {
-  user-select: none;
-}
-
-.view-cell {
-  width: 22px;
-  height: 22px;
-  box-sizing: border-box;
-  border-radius: 2px;
-}
-
-.view-cell.filled {
-  background-color: var(--filled);
-}
-
-.view-cell.empty {
-  background-color: var(--sheet);
-  border: 1px solid var(--rule);
-}
-
 .view-card-footer {
   display: flex;
   flex-direction: column;

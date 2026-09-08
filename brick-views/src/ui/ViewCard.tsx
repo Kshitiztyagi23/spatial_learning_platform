@@ -1,8 +1,14 @@
-import type { ViewName } from '../core/types'
+import { Canvas } from '@react-three/fiber'
+import { AxisCamera } from '../scene/AxisCamera'
+import { PlacedBricks } from '../scene/PlacedBricks'
+import { axisCameraFor } from '../scene/axisView'
+import type { BoardSize, Placement, ViewName } from '../core/types'
 
 interface ViewCardProps {
   name: ViewName
-  grid: boolean[][]
+  board: BoardSize
+  solution: Placement[]
+  monochrome?: boolean
   isMatch: boolean | null
 }
 
@@ -12,7 +18,19 @@ const VIEW_LABELS: Record<ViewName, string> = {
   top: 'Top',
 }
 
-export function ViewCard({ name, grid, isMatch }: ViewCardProps) {
+// World units to card pixels, then capped — keeps the aspect ratio true to
+// the board (no stretching) without letting a big board blow up the card.
+const UNIT_PX = 24
+const MAX_PX = 220
+
+function cardSize(halfWidth: number, halfHeight: number): { width: number; height: number } {
+  const rawWidth = halfWidth * 2 * UNIT_PX
+  const rawHeight = halfHeight * 2 * UNIT_PX
+  const scale = Math.min(1, MAX_PX / Math.max(rawWidth, rawHeight))
+  return { width: Math.round(rawWidth * scale), height: Math.round(rawHeight * scale) }
+}
+
+export function ViewCard({ name, board, solution, monochrome = false, isMatch }: ViewCardProps) {
   const label = VIEW_LABELS[name]
 
   // Card border styling: default 1px --rule; after check 2px --match or --miss
@@ -24,13 +42,14 @@ export function ViewCard({ name, grid, isMatch }: ViewCardProps) {
     borderColor = isMatch ? 'var(--match)' : 'var(--miss)'
   }
 
-  const numCols = grid[0]?.length ?? 0
+  const { halfWidth, halfHeight } = axisCameraFor(name, board)
+  const { width, height } = cardSize(halfWidth, halfHeight)
 
   return (
     <div
       className="view-card-wrapper"
       data-view={name}
-      aria-label={`${label} view card`}
+      aria-label={`${label} view card — the solid as it looks from this side`}
     >
       <div
         className="view-card"
@@ -38,26 +57,18 @@ export function ViewCard({ name, grid, isMatch }: ViewCardProps) {
           border: `${borderWidth} solid ${borderColor}`,
         }}
       >
-        <div
-          className="view-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${numCols}, 22px)`,
-            gap: '3px',
-          }}
-          role="grid"
-          aria-readonly="true"
+        {/* frameloop="demand": renders once on mount/change, then idles —
+            this card never orbits, so there is nothing to keep redrawing. */}
+        <Canvas
+          frameloop="demand"
+          gl={{ antialias: true, alpha: true }}
+          style={{ width, height, display: 'block' }}
         >
-          {grid.map((row, r) =>
-            row.map((filled, c) => (
-              <div
-                key={`${r}-${c}`}
-                className={`view-cell ${filled ? 'filled' : 'empty'}`}
-                aria-label={`Row ${r + 1} Col ${c + 1} ${filled ? 'filled' : 'empty'}`}
-              />
-            ))
-          )}
-        </div>
+          <ambientLight intensity={0.85} />
+          <directionalLight position={[6, 12, 8]} intensity={0.45} color="#FFFFFF" />
+          <AxisCamera view={name} board={board} />
+          <PlacedBricks placements={solution} monochrome={monochrome} />
+        </Canvas>
       </div>
 
       <div className="view-card-footer">

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { projectCells, toGrids } from "../projection";
+import { projectCells, projectColors, toGrids } from "../projection";
 import type { BoardSize, Vec3 } from "../types";
 
 // An L that is asymmetric on every axis, so a flipped row or column
@@ -40,4 +40,25 @@ it("projects and gridifies an asymmetric L into the exact display-orientation dr
     [true, true, true],
     [true, false, false],
   ]);
+});
+
+it("projectCells' keys equal projectColors' keys (one shared depth-sort)", () => {
+  const withColor = cells.map((cell) => ({ cell, color: "red" as const }));
+  const silhouette = projectCells(cells);
+  const colored = projectColors(withColor);
+  expect(new Set(colored.front.keys())).toEqual(silhouette.front);
+  expect(new Set(colored.right.keys())).toEqual(silhouette.right);
+  expect(new Set(colored.top.keys())).toEqual(silhouette.top);
+});
+
+it("depth-sorts each view: the nearest cell's colour wins, not the first-inserted one", () => {
+  // Two cells stacked along z at the same (x,y) — front view sees only the
+  // nearer one (larger z, spec §2). Insert the far one first, deliberately,
+  // so a "first wins" bug would fail this.
+  const stacked = [
+    { cell: { x: 0, y: 0, z: 0 }, color: "blue" as const }, // far from front
+    { cell: { x: 0, y: 0, z: 1 }, color: "red" as const }, // nearer to front
+  ];
+  const views = projectColors(stacked);
+  expect(views.front.get("0,0")).toBe("red");
 });

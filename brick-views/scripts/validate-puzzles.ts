@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { validatePuzzle } from "../src/core/puzzle";
+import { validateColourRules, validatePuzzle } from "../src/core/puzzle";
 import type { Puzzle } from "../src/core/types";
 
 const puzzlesDir = join(import.meta.dirname, "..", "src", "data", "puzzles");
@@ -12,6 +12,7 @@ for (const file of files) {
   const puzzle: Puzzle = JSON.parse(readFileSync(join(puzzlesDir, file), "utf-8"));
   try {
     validatePuzzle(puzzle);
+    validateColourRules(puzzle);
     console.log(`ok    ${file}`);
   } catch (err) {
     failed = true;

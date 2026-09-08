@@ -3,22 +3,29 @@ import { Canvas } from '@react-three/fiber'
 import type * as THREE from 'three'
 import { useSession } from '../state/session'
 import { Baseplate } from './Baseplate'
+import { AxisCamera } from './AxisCamera'
 import { CameraRig, type CameraPreset } from './CameraRig'
 import { PlacedBricks } from './PlacedBricks'
 import { SceneInteraction } from './SceneInteraction'
+import type { ViewName } from '../core/types'
+
+function isAxisPreset(preset: CameraPreset | null): preset is ViewName {
+  return preset === 'front' || preset === 'right' || preset === 'top'
+}
 
 export function Stage() {
   const board = useSession((state) => state.derived.puzzle.board)
-  const wrongInstanceIds = useSession((state) => state.lastCheck?.wrongInstanceIds)
+  const monochrome = useSession((state) => !!state.derived.puzzle.monochrome)
   const [activePreset, setActivePreset] = useState<CameraPreset | null>('3d')
   const [highlightedInstanceId, setHighlightedInstanceId] = useState<string | null>(null)
 
-  // Erase-mode hover target and Check's wrong-brick flags both read as "this needs attention"
+  // Erase-mode hover target reads as "this needs attention". Hint-ladder
+  // rung 5 ("Show me") is wired in separately - see ui/HintPanel.tsx.
   const highlightedInstanceIds = useMemo(() => {
-    const ids = new Set(wrongInstanceIds ?? [])
+    const ids = new Set<string>()
     if (highlightedInstanceId) ids.add(highlightedInstanceId)
     return ids
-  }, [wrongInstanceIds, highlightedInstanceId])
+  }, [highlightedInstanceId])
 
   const plateRef = useRef<THREE.Mesh>(null)
   const placedRef = useRef<THREE.Group>(null)
@@ -43,8 +50,9 @@ export function Stage() {
           activePreset={activePreset}
           onUserDrag={() => setActivePreset(null)}
         />
+        {isAxisPreset(activePreset) && <AxisCamera view={activePreset} board={board} />}
         <Baseplate ref={plateRef} board={board} />
-        <PlacedBricks ref={placedRef} highlightedInstanceIds={highlightedInstanceIds} />
+        <PlacedBricks ref={placedRef} highlightedInstanceIds={highlightedInstanceIds} monochrome={monochrome} />
         <SceneInteraction
           plateRef={plateRef}
           placedRef={placedRef}

@@ -1,19 +1,22 @@
 import { useMemo } from 'react'
-import { PIECES } from '../core/pieces'
+import { PIECES, MONOCHROME_HEX } from '../core/pieces'
 import { footprintFor } from '../core/geometry'
 import type { Placement } from '../core/types'
 
 interface BrickMeshProps {
   placement: Placement
   isHighlighted?: boolean
+  /** renders one neutral grey instead of the piece's own colour */
+  monochrome?: boolean
 }
 
 // No-op raycast so raycaster passes through studs to the brick body
 const noopRaycast = () => {}
 
-export function BrickMesh({ placement, isHighlighted = false }: BrickMeshProps) {
+export function BrickMesh({ placement, isHighlighted = false, monochrome = false }: BrickMeshProps) {
   const { typeId, rotation, origin } = placement
   const piece = PIECES[typeId]
+  const color = monochrome ? MONOCHROME_HEX : piece.hex
   const { w, d } = footprintFor(typeId, rotation)
 
   // Brick body center in world coordinates
@@ -45,7 +48,7 @@ export function BrickMesh({ placement, isHighlighted = false }: BrickMeshProps) 
       <mesh castShadow receiveShadow>
         <boxGeometry args={[w - 0.03, 0.97, d - 0.03]} />
         <meshStandardMaterial
-          color={piece.color}
+          color={color}
           emissive={isHighlighted ? '#B8502E' : '#000000'}
           emissiveIntensity={isHighlighted ? 0.65 : 0}
           roughness={0.42}
@@ -63,7 +66,7 @@ export function BrickMesh({ placement, isHighlighted = false }: BrickMeshProps) 
         >
           <cylinderGeometry args={[0.18, 0.18, 0.14, 16]} />
           <meshStandardMaterial
-            color={piece.color}
+            color={color}
             emissive={isHighlighted ? '#B8502E' : '#000000'}
             emissiveIntensity={isHighlighted ? 0.65 : 0}
             roughness={0.42}

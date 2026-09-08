@@ -1,5 +1,5 @@
 {
-  "id": "step-01",
+  "id": "tut-02",
   "name": "Two bricks",
   "hint": "The top view shows where the bricks sit on the board.",
   "board": { "width": 6, "depth": 6, "height": 5 },
