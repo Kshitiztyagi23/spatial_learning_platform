@@ -4,6 +4,7 @@ Antigravity is retired; this is no longer a cross-agent handoff file. Kept as a 
 
 ## Log
 
+- 2026-09-08: Fixed false "needs something under it" when hovering an empty column next to a placed brick. `pointer.ts` build-mode resolution raycast the whole scene (plate + placed bricks), so a shallow camera angle could make the ray graze a neighboring brick's raised top face instead of the plate, resolving the hover to `y=1` over open ground. Build mode now raycasts the plate only and derives stack height from `placed` directly (new `stackHeightAt` helper), so column height comes from real occupancy instead of whichever mesh the ray happened to hit. Added `src/scene/__tests__/pointer.test.ts`.
 - 2026-09-03: Resolved. `puzzleIndex`/`puzzleCount` (and `nextPuzzle`/`prevPuzzle`) moved into `session.ts`; `PuzzleBar.tsx` now reads them from the store instead of searching `loadPuzzles()`. See `00-SHARED-SPEC.md` §6.
 - 2026-09-03: A8 desktop pass, verified by code inspection only (no browser available this session):
   - Board resize: `Canvas` has no fixed `width`/`height`/`aspect` props; `.stage-container`/`.app-board-region` are 100%/100% with `min-width:0` in the grid, no `aspect-ratio` anywhere in global.css. r3f's default resize handling should keep the canvas filling its container without letterboxing, but this needs an actual window-drag to confirm.

@@ -8,6 +8,27 @@ export function footprintFor(typeId: PieceTypeId, rotation: Rotation): { w: numb
     : { w: piece.width, d: piece.depth };
 }
 
+/**
+ * Min-corner origin for a piece pivoting around a fixed board point (the hovered
+ * cell). Each 90° step sweeps the footprint into the next quadrant around that
+ * point (clockwise) instead of rotating in place around the piece's own center —
+ * a plain rectangle is point-symmetric about its center, so center-pivoting makes
+ * 0/180 and 90/270 indistinguishable, which is the behavior this replaces.
+ */
+export function originForPivot(typeId: PieceTypeId, rotation: Rotation, pivot: Vec3): Vec3 {
+  const { w, d } = footprintFor(typeId, rotation);
+  switch (rotation) {
+    case 0:
+      return { x: pivot.x, y: pivot.y, z: pivot.z };
+    case 90:
+      return { x: pivot.x, y: pivot.y, z: pivot.z - d };
+    case 180:
+      return { x: pivot.x - w, y: pivot.y, z: pivot.z - d };
+    case 270:
+      return { x: pivot.x - w, y: pivot.y, z: pivot.z };
+  }
+}
+
 export function cellsFor(typeId: PieceTypeId, rotation: Rotation, origin: Vec3): Vec3[] {
   const { w, d } = footprintFor(typeId, rotation);
   const cells: Vec3[] = [];

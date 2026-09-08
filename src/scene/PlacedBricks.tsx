@@ -4,11 +4,11 @@ import { useSession } from '../state/session'
 import { BrickMesh } from './BrickMesh'
 
 interface PlacedBricksProps {
-  highlightedInstanceId?: string | null
+  highlightedInstanceIds?: ReadonlySet<string>
 }
 
 export const PlacedBricks = forwardRef<THREE.Group, PlacedBricksProps>(
-  ({ highlightedInstanceId }, ref) => {
+  ({ highlightedInstanceIds }, ref) => {
     const placed = useSession((state) => state.placed)
 
     return (
@@ -17,7 +17,7 @@ export const PlacedBricks = forwardRef<THREE.Group, PlacedBricksProps>(
           <BrickMesh
             key={placement.instanceId}
             placement={placement}
-            isHighlighted={highlightedInstanceId === placement.instanceId}
+            isHighlighted={highlightedInstanceIds?.has(placement.instanceId) ?? false}
           />
         ))}
       </group>

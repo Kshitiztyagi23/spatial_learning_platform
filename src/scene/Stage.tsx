@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import type * as THREE from 'three'
 import { useSession } from '../state/session'
@@ -9,8 +9,16 @@ import { SceneInteraction } from './SceneInteraction'
 
 export function Stage() {
   const board = useSession((state) => state.derived.puzzle.board)
+  const wrongInstanceIds = useSession((state) => state.lastCheck?.wrongInstanceIds)
   const [activePreset, setActivePreset] = useState<CameraPreset | null>('3d')
   const [highlightedInstanceId, setHighlightedInstanceId] = useState<string | null>(null)
+
+  // Erase-mode hover target and Check's wrong-brick flags both read as "this needs attention"
+  const highlightedInstanceIds = useMemo(() => {
+    const ids = new Set(wrongInstanceIds ?? [])
+    if (highlightedInstanceId) ids.add(highlightedInstanceId)
+    return ids
+  }, [wrongInstanceIds, highlightedInstanceId])
 
   const plateRef = useRef<THREE.Mesh>(null)
   const placedRef = useRef<THREE.Group>(null)
@@ -36,7 +44,7 @@ export function Stage() {
           onUserDrag={() => setActivePreset(null)}
         />
         <Baseplate ref={plateRef} board={board} />
-        <PlacedBricks ref={placedRef} highlightedInstanceId={highlightedInstanceId} />
+        <PlacedBricks ref={placedRef} highlightedInstanceIds={highlightedInstanceIds} />
         <SceneInteraction
           plateRef={plateRef}
           placedRef={placedRef}

@@ -386,6 +386,23 @@ html, body {
   background-color: var(--stage);
 }
 
+.puzzle-select {
+  background-color: transparent;
+  color: var(--ink);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  height: 32px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.puzzle-select:hover {
+  background-color: var(--stage);
+}
+
 /* Toolbar styles */
 .toolbar {
   display: flex;

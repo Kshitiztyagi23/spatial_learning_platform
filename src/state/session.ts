@@ -24,6 +24,7 @@ interface Session {
   lastReject: RejectReason | null;
   puzzleIndex: number;
   puzzleCount: number;
+  puzzleList: { id: string; name: string }[];
 
   loadPuzzle(id: string): void;
   selectType(id: PieceTypeId | null): void;
@@ -64,6 +65,7 @@ export const useSession = create<Session>((set, get) => ({
   lastReject: null,
   puzzleIndex: 0,
   puzzleCount: catalog.length,
+  puzzleList: catalog.map((p) => ({ id: p.id, name: p.name })),
 
   loadPuzzle(id) {
     const puzzle = findPuzzle(id);

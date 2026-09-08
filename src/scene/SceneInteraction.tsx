@@ -4,6 +4,7 @@ import type * as THREE from 'three'
 import { useSession } from '../state/session'
 import { getRaycastCandidate } from './pointer'
 import { GhostBrick } from './GhostBrick'
+import { originForPivot } from '../core/geometry'
 import type { Vec3 } from '../core/types'
 
 interface SceneInteractionProps {
@@ -21,8 +22,10 @@ export function SceneInteraction({
 
   const mode = useSession((state) => state.mode)
   const selectedType = useSession((state) => state.selectedType)
+  const rotation = useSession((state) => state.rotation)
   const place = useSession((state) => state.place)
   const removeAt = useSession((state) => state.removeAt)
+  const placed = useSession((state) => state.placed)
 
   const [candidate, setCandidate] = useState<Vec3 | null>(null)
 
@@ -60,7 +63,8 @@ export function SceneInteraction({
         camera,
         plateRef.current,
         placedRef.current,
-        mode
+        mode,
+        placed
       )
 
       if (mode === 'erase') {
@@ -92,14 +96,15 @@ export function SceneInteraction({
           camera,
           plateRef.current,
           placedRef.current,
-          mode
+          mode,
+          placed
         )
 
         if (hit) {
           if (mode === 'erase' && hit.type === 'brick') {
             removeAt(hit.cell)
           } else if (mode === 'build' && selectedType) {
-            place(hit.cell)
+            place(originForPivot(selectedType, rotation, hit.cell))
           }
         }
       }
@@ -128,7 +133,7 @@ export function SceneInteraction({
       dom.removeEventListener('pointerup', onPointerUp)
       dom.removeEventListener('pointerleave', onPointerLeave)
     }
-  }, [camera, gl.domElement, mode, selectedType, place, removeAt, plateRef, placedRef, onHighlightChange])
+  }, [camera, gl.domElement, mode, selectedType, rotation, place, removeAt, placed, plateRef, placedRef, onHighlightChange])
 
   return <GhostBrick candidate={candidate} />
 }
