@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSession } from './state/session'
+import { orderedTypeIds } from './core/pieces'
 import { PuzzleBar } from './ui/PuzzleBar'
 import { Tray } from './ui/Tray'
 import { Stage } from './scene/Stage'
@@ -35,15 +36,6 @@ export default function App() {
         case 'R':
           rotateCW()
           break
-        case '1':
-          selectType('2x2')
-          break
-        case '2':
-          selectType('2x3')
-          break
-        case '3':
-          selectType('2x4')
-          break
         case 'e':
         case 'E':
           useSession.setState({ mode: mode === 'build' ? 'erase' : 'build' })
@@ -57,6 +49,16 @@ export default function App() {
         case 'ArrowRight':
           nextPuzzle()
           break
+        default: {
+          // 1-9 select the nth tray item in its display order (Tray.tsx's
+          // own ordering) — not a fixed brick type, since the tray's
+          // contents now vary per puzzle.
+          const slot = Number(e.key)
+          if (Number.isInteger(slot) && slot >= 1 && slot <= 9) {
+            const typeId = orderedTypeIds(useSession.getState().derived.tray)[slot - 1]
+            if (typeId) selectType(typeId)
+          }
+        }
       }
     }
 

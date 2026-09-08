@@ -1,0 +1,10 @@
+{
+  "id": "tut-01",
+  "name": "Side by side",
+  "hint": "The top view shows exactly where both bricks sit.",
+  "board": { "width": 6, "depth": 6, "height": 5 },
+  "solution": [
+    { "instanceId": "a", "typeId": "2x2-red", "rotation": 0, "origin": { "x": 1, "y": 0, "z": 1 } },
+    { "instanceId": "b", "typeId": "2x4-yellow", "rotation": 0, "origin": { "x": 3, "y": 0, "z": 1 } }
+  ]
+}

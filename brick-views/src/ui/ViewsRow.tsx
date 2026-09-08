@@ -5,16 +5,18 @@ import { ViewCard } from './ViewCard'
 const VIEW_ORDER: ViewName[] = ['front', 'right', 'top']
 
 export function ViewsRow() {
-  const viewGrids = useSession((state) => state.derived.viewGrids)
+  const puzzle = useSession((state) => state.derived.puzzle)
   const lastCheck = useSession((state) => state.lastCheck)
 
   return (
     <div className="views-container" role="region" aria-label="Orthographic target views">
       {VIEW_ORDER.map((name) => (
         <ViewCard
-          key={name}
+          key={`${puzzle.id}-${name}`}
           name={name}
-          grid={viewGrids[name]}
+          board={puzzle.board}
+          solution={puzzle.solution}
+          monochrome={puzzle.monochrome}
           isMatch={lastCheck ? lastCheck.views[name] : null}
         />
       ))}

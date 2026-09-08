@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { BoardSize } from '../core/types'
+import { AXIS_ANGLES } from './axisView'
 
 export type CameraPreset = 'front' | 'right' | 'top' | '3d'
 
@@ -41,16 +42,16 @@ export function CameraRig({ board, activePreset, onUserDrag }: CameraRigProps) {
 
     switch (activePreset) {
       case 'front':
-        targetTheta.current = 0
-        targetPhi.current = Math.PI / 2 - 0.03
+        targetTheta.current = AXIS_ANGLES.front.theta
+        targetPhi.current = AXIS_ANGLES.front.phi
         break
       case 'right':
-        targetTheta.current = Math.PI / 2
-        targetPhi.current = Math.PI / 2 - 0.03
+        targetTheta.current = AXIS_ANGLES.right.theta
+        targetPhi.current = AXIS_ANGLES.right.phi
         break
       case 'top':
-        targetTheta.current = 0
-        targetPhi.current = 0.05
+        targetTheta.current = AXIS_ANGLES.top.theta
+        targetPhi.current = AXIS_ANGLES.top.phi
         break
       case '3d':
         targetTheta.current = Math.PI * 0.24
@@ -122,6 +123,10 @@ export function CameraRig({ board, activePreset, onUserDrag }: CameraRigProps) {
 
   // Frame easing: robust across both 60fps and low-fps environments
   useFrame((_, delta) => {
+    // AxisCamera (an orthographic camera) can briefly become the active
+    // camera while a preset is locked in (see Stage.tsx / plan §2). Skip
+    // this frame rather than mutate a camera this rig doesn't own.
+    if (!(camera instanceof THREE.PerspectiveCamera)) return
     // Easing factor: ~0.18 per frame at 60Hz -> exp decay rate ~12
     const rate = Math.min(1, Math.max(0.18, 1 - Math.exp(-12 * delta)))
 

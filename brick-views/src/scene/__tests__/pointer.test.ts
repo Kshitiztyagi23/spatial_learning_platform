@@ -42,7 +42,7 @@ describe("getRaycastCandidate (build mode)", () => {
   // One 2x3 brick occupying columns x:0-1, z:0-2. Columns x:2-3 are empty,
   // matching the reported "2 empty columns beside the placed bricks" shape.
   const placed: Placement[] = [
-    { instanceId: "blue", typeId: "2x3", rotation: 0, origin: { x: 0, y: 0, z: 0 } },
+    { instanceId: "blue", typeId: "2x3-blue", rotation: 0, origin: { x: 0, y: 0, z: 0 } },
   ];
 
   // Its mesh is present in placedGroup so a test regressing to the old

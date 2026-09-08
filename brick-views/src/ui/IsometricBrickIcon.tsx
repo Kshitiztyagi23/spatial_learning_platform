@@ -7,6 +7,8 @@ interface IsometricBrickIconProps {
   width?: number
   height?: number
   className?: string
+  /** overrides the piece's own colour - used for monochrome puzzles */
+  color?: string
 }
 
 type Point = [number, number]
@@ -16,9 +18,11 @@ export function IsometricBrickIcon({
   width = 54,
   height = 42,
   className = '',
+  color: colorOverride,
 }: IsometricBrickIconProps) {
   const piece = PIECES[typeId]
-  const { width: w, depth: d, color } = piece
+  const { width: w, depth: d, hex: pieceColor } = piece
+  const color = colorOverride ?? pieceColor
 
   const { topPoints, leftFace, rightFace, studs } = useMemo(() => {
     const unitX = 6.8
@@ -33,7 +37,7 @@ export function IsometricBrickIcon({
     ]
 
     const allX = rawTop.map(([x]) => x)
-    const allY = rawTop.flatMap(([_, y]) => [y, y + h])
+    const allY = rawTop.flatMap(([, y]) => [y, y + h])
     const minX = Math.min(...allX)
     const maxX = Math.max(...allX)
     const minY = Math.min(...allY)

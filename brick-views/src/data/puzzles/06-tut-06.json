@@ -1,0 +1,14 @@
+{
+  "id": "tut-06",
+  "name": "Six bricks",
+  "hint": "Count the tray. A brick may be hiding inside.",
+  "board": { "width": 6, "depth": 6, "height": 5 },
+  "solution": [
+    { "instanceId": "q1", "typeId": "2x2-red", "rotation": 0, "origin": { "x": 0, "y": 0, "z": 0 } },
+    { "instanceId": "q2", "typeId": "2x2-red", "rotation": 0, "origin": { "x": 2, "y": 0, "z": 0 } },
+    { "instanceId": "q3", "typeId": "2x2-red", "rotation": 0, "origin": { "x": 0, "y": 0, "z": 2 } },
+    { "instanceId": "q4", "typeId": "2x2-red", "rotation": 0, "origin": { "x": 2, "y": 0, "z": 2 } },
+    { "instanceId": "t",  "typeId": "2x2-red", "rotation": 0, "origin": { "x": 2, "y": 1, "z": 2 } },
+    { "instanceId": "t2", "typeId": "2x2-red", "rotation": 0, "origin": { "x": 0, "y": 1, "z": 0 } }
+  ]
+}

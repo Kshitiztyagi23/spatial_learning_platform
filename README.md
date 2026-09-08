@@ -2,7 +2,7 @@
 
 A kid rebuilds a 3D shape from three flat views (front, right, top) using bricks from a tray, then checks their work. Built for ages 6-10, desktop only, no scoring or accounts, just the puzzle.
 
-The actual app lives in [`brick-views/`](./brick-views). Everything else here is planning material that came before it:
+The app lives in [`brick-views/`](./brick-views). Everything else here is planning and reference material:
 
 | File | What it is |
 |---|---|
@@ -10,6 +10,8 @@ The actual app lives in [`brick-views/`](./brick-views). Everything else here is
 | [`00-SHARED-SPEC.md`](./00-SHARED-SPEC.md) | The spec. Binding: this is what the app is built against. |
 | [`01-CLAUDE-CODE-PLAN.md`](./01-CLAUDE-CODE-PLAN.md) | Build plan for the rules/state side of the app. |
 | [`02-ANTIGRAVITY-PLAN.md`](./02-ANTIGRAVITY-PLAN.md) | Build plan for the scene/UI side of the app. |
+| [`03-COLOR-AND-HINTS-PLAN.md`](./03-COLOR-AND-HINTS-PLAN.md) | Colour-aware grading, orthographic view renders, and a graded hint ladder. Phases 0 through 2 landed; Phase 3 (hint UI) is next. |
+| [`TODO.md`](./TODO.md) | Loose ends raised mid-conversation, not yet scoped into a plan doc. |
 | [`brick-views-v2.html`](./brick-views-v2.html) | An early single-file prototype, kept for reference only. Not part of the running app. |
 
 This started as a two-agent build, one on the rules, one on the scene and UI, split by file ownership (see `OWNERSHIP.md` and `HANDOFF.md` inside `brick-views/`). That split is retired now; `brick-views/` is maintained as one codebase.
