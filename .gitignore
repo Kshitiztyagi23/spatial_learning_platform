@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd.bak
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/

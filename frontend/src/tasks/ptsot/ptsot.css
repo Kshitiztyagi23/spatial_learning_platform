@@ -1,0 +1,194 @@
+/* PTSOT Styles scoped for Spatial Learning Platform */
+
+:root {
+  --ptsot-primary: var(--accent, #2563eb);
+  --ptsot-hover: var(--accent-hover, #1d4ed8);
+  --ptsot-success: var(--success, #16a34a);
+  --ptsot-error: var(--error, #dc2626);
+  --ptsot-border: var(--border, #e5e7eb);
+  --ptsot-bg: #f8fafc;
+}
+
+.question-image {
+  max-width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--ptsot-border);
+  background: white;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.explanation-box {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.explanation-box.success {
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid var(--ptsot-success);
+}
+
+.explanation-box.error {
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid var(--ptsot-error);
+}
+
+.timer-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ptsot-border);
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.timer-display {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ptsot-primary);
+}
+
+.timer-warning {
+  color: var(--ptsot-error) !important;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.angle-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1.5rem 0;
+  user-select: none;
+}
+
+.angle-picker-top-label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--ptsot-primary);
+  font-size: 1.1rem;
+  text-transform: capitalize;
+}
+
+.angle-picker-circle {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  border: 4px solid var(--ptsot-border);
+  background-color: white;
+  cursor: crosshair;
+  touch-action: none;
+  margin: 1rem 0;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05), 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.angle-picker-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background-color: var(--ink, #1f2937);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.angle-picker-center-label {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink, #1f2937);
+  text-transform: capitalize;
+}
+
+.angle-picker-zero-line {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 50%;
+  background-color: var(--muted, #64748b);
+  transform: translateX(-50%);
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  opacity: 0.6;
+  z-index: 1;
+}
+
+.angle-picker-zero-line::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -4px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--muted, #64748b);
+}
+
+.angle-picker-value-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 50%;
+  background-color: var(--ptsot-primary);
+  transform-origin: bottom center;
+  z-index: 1;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  box-shadow: 0 0 4px var(--ptsot-primary);
+}
+
+.angle-picker-value-line::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -3px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--ptsot-primary);
+}
+
+.angle-picker-value-display {
+  margin-top: 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ptsot-primary);
+  min-height: 2rem;
+}
+
+.angle-picker-correct-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 50%;
+  background-color: transparent;
+  border-left: 4px dashed var(--ptsot-success);
+  transform-origin: bottom left;
+  z-index: 1;
+}
