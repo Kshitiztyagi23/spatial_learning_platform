@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg_7_1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#edf2f7" />
+    </linearGradient>
+    <pattern id="grid_7_1" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3,3"/>
+    </pattern>
+  </defs>
+  <rect width="1000" height="650" fill="url(#bg_7_1)" rx="16"/>
+  <rect width="1000" height="650" fill="url(#grid_7_1)" rx="16"/>
+  
+  <!-- Outer Decorative Border -->
+  <rect x="24" y="24" width="952" height="602" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-opacity="0.35" rx="12" />
+  
+  <!-- Center Illustration Badge -->
+  <g transform="translate(500, 260)">
+    <circle r="90" fill="#ea580c" fill-opacity="0.12" stroke="#ea580c" stroke-width="3" />
+    
+      <!-- Camera / Main View Icon -->
+      <rect x="-45" y="-25" width="90" height="60" rx="10" fill="#ea580c" />
+      <circle cx="0" cy="5" r="18" fill="#ffffff" />
+      <circle cx="0" cy="5" r="10" fill="#ea580c" />
+      <polygon points="-15,-25 -8,-38 8,-38 15,-25" fill="#ea580c" />
+    
+  </g>
+  
+  <!-- Labels -->
+  <text x="500" y="415" font-family="system-ui, -apple-system, sans-serif" font-size="34" font-weight="800" fill="#0f172a" text-anchor="middle">Scenario 7 — Main View 2</text>
+  <text x="500" y="455" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#475569" text-anchor="middle">Secondary Field Angle</text>
+  
+  <!-- Bottom Helper Note -->
+  <rect x="180" y="520" width="640" height="46" rx="23" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+  <text x="500" y="550" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="600" fill="#64748b" text-anchor="middle">🔍 Click image to enlarge in full-screen modal • Replace in public/perspective/templates/scenario_7/main_view_2.svg</text>
+</svg>

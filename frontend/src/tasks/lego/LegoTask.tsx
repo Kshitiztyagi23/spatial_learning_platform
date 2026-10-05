@@ -98,12 +98,12 @@ export function LegoTask() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', height: 'calc(100vh - 150px)', minHeight: '650px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
       {/* Top Controls Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--sheet)', padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid var(--rule)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--sheet)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--rule)', flexShrink: 0 }}>
         <div>
-          <span style={{ fontWeight: 600, fontSize: '1.05rem' }}>3D LEGO Construction Activity</span>
-          <span style={{ marginLeft: '1rem', color: 'var(--muted)', fontSize: '0.9rem' }}>
+          <span style={{ fontWeight: 600, fontSize: '1rem' }}>3D LEGO Construction Activity</span>
+          <span style={{ marginLeft: '1rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
             Build the 3D shape that matches all 3 orthographic views.
           </span>
         </div>
@@ -113,7 +113,7 @@ export function LegoTask() {
       </div>
 
       {/* Main 3D Studio Workstation */}
-      <div className="app-shell" style={{ height: '100%', minHeight: 'unset', padding: 0 }}>
+      <div className="app-shell" style={{ height: '100%', flex: 1, minHeight: 0, padding: 0 }}>
         <header className="app-header" aria-label="Puzzle header">
           <PuzzleBar />
         </header>

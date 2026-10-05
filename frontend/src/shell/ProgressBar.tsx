@@ -5,6 +5,7 @@ const STEPS = [
   { id: 'demographics', label: 'Details' },
   { id: 'spatial_experience', label: 'Experience' },
   { id: 'ptsot', label: 'PTSOT' },
+  { id: 'spatial_perspective_taking', label: 'Perspective' },
   { id: 'lego', label: 'LEGO' },
   { id: 'done', label: 'Done' }
 ];
@@ -15,8 +16,8 @@ export function ProgressBar({ currentStage }: { currentStage: string }) {
     : 0;
 
   return (
-    <div style={{ backgroundColor: 'var(--sheet)', padding: '1rem 2rem', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '800px', margin: '0 auto', position: 'relative' }}>
+    <div style={{ backgroundColor: 'var(--sheet)', padding: '0.75rem 2rem', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '850px', margin: '0 auto', position: 'relative' }}>
         {/* Background line */}
         <div style={{ position: 'absolute', top: '50%', left: '0', right: '0', height: '2px', backgroundColor: 'var(--border)', zIndex: 0, transform: 'translateY(-50%)' }} />
         
@@ -28,7 +29,7 @@ export function ProgressBar({ currentStage }: { currentStage: string }) {
           transition: 'width 0.3s ease'
         }} />
 
-        {STEPS.slice(0, 5).map((step, index) => {
+        {STEPS.slice(0, STEPS.length - 1).map((step, index) => {
           const isCompleted = index < currentIndex;
           const isActive = index === currentIndex;
           

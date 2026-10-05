@@ -3,6 +3,7 @@ export const STAGES = [
   'demographics',
   'spatial_experience',
   'ptsot',
+  'spatial_perspective_taking',
   'lego',
   'done',
 ] as const
@@ -14,6 +15,7 @@ export const STAGE_ROUTES: Record<Stage, string> = {
   demographics: '/demographics',
   spatial_experience: '/experience',
   ptsot: '/ptsot',
+  spatial_perspective_taking: '/perspective',
   lego: '/lego',
   done: '/done',
 }

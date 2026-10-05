@@ -6,6 +6,7 @@ import { ConsentPage } from './tasks/intake/ConsentPage';
 import { DemographicsPage } from './tasks/intake/DemographicsPage';
 import { SpatialExperiencePage } from './tasks/intake/SpatialExperiencePage';
 import { PtsotTask } from './tasks/ptsot/PtsotTask';
+import { PerspectiveTask } from './tasks/perspective/PerspectiveTask';
 import { LegoTask } from './tasks/lego/LegoTask';
 import { DonePage } from './tasks/done/DonePage';
 
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
       {
         path: 'ptsot',
         element: <PtsotTask />,
+      },
+      {
+        path: 'perspective',
+        element: <PerspectiveTask />,
       },
       {
         path: 'lego',
