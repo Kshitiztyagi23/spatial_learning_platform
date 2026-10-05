@@ -53,19 +53,33 @@ export function getRaycastCandidate(
 
   raycaster.setFromCamera(ndc, camera)
 
-  // Build mode targets the plate only: which column the pointer is over is a
-  // flat top-down question, and letting a placed brick's raised top face
-  // occlude the ray (it visually overlaps neighboring columns at a shallow
-  // camera angle) previously made hovering an empty column right next to a
-  // brick resolve one level up with nothing under it. Occupancy for that
-  // column comes from `placed` directly instead of from whatever the ray hit.
+  // In build mode, we must intersect both the plate and placed bricks so the user
+  // can point at the top of a placed brick to stack on it.
   if (mode === 'build') {
-    if (!plateMesh) return null
-    const hits = raycaster.intersectObject(plateMesh, true)
+    const targets: THREE.Object3D[] = []
+    if (plateMesh) targets.push(plateMesh)
+    if (placedGroup) targets.push(placedGroup)
+
+    const hits = raycaster.intersectObjects(targets, true)
     if (!hits.length || !hits[0]) return null
 
-    const x = Math.round(hits[0].point.x)
-    const z = Math.round(hits[0].point.z)
+    const hit = hits[0]
+    let px = hit.point.x
+    let pz = hit.point.z
+    
+    if (hit.object !== plateMesh && hit.face) {
+      const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)
+      const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize()
+      
+      // Push the point slightly outwards along the normal so it unambiguously rounds
+      // into the adjacent cell if we hit a side face, or stays in the same cell if we hit the top.
+      px += worldNormal.x * 0.1
+      pz += worldNormal.z * 0.1
+    }
+
+    const x = Math.round(px)
+    const z = Math.round(pz)
+    
     return {
       type: 'plate',
       cell: { x, y: stackHeightAt(placed, x, z), z },
