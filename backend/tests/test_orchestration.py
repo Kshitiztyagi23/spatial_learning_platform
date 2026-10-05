@@ -6,7 +6,8 @@ def test_stage_sequence():
     assert get_next_stage("intake_consent") == "demographics"
     assert get_next_stage("demographics") == "spatial_experience"
     assert get_next_stage("spatial_experience") == "ptsot"
-    assert get_next_stage("ptsot") == "lego"
+    assert get_next_stage("ptsot") == "spatial_perspective_taking"
+    assert get_next_stage("spatial_perspective_taking") == "lego"
     assert get_next_stage("lego") == "done"
     assert get_next_stage("done") is None
 

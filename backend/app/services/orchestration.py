@@ -6,6 +6,7 @@ STAGE_SEQUENCE = [
   "demographics", 
   "spatial_experience",
   "ptsot",
+  "spatial_perspective_taking",
   "lego",
   "done"
 ]

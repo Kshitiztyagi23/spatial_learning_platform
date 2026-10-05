@@ -181,16 +181,16 @@ export function PtsotTask() {
           }
         });
 
-        setSession({ currentStage: 'lego' });
-        navigate('/lego');
+        setSession({ currentStage: 'spatial_perspective_taking' });
+        navigate('/perspective');
       } catch (err) {
         console.error('Failed to submit PTSOT trials:', err);
-        setSession({ currentStage: 'lego' });
-        navigate('/lego');
+        setSession({ currentStage: 'spatial_perspective_taking' });
+        navigate('/perspective');
       }
     } else {
-      setSession({ currentStage: 'lego' });
-      navigate('/lego');
+      setSession({ currentStage: 'spatial_perspective_taking' });
+      navigate('/perspective');
     }
   }, [answers, reactionTimes, isSubmitting, sessionId, tabSwitchCount, timeLeft, setSession, navigate]);
 

@@ -4,7 +4,10 @@ __pycache__/
 *$py.class
 *.pyd.bak
 venv/
+spatial/
 .env
+*.env
+scratch/
 
 # Node
 node_modules/
