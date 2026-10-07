@@ -404,9 +404,6 @@ export function PerspectiveTask() {
             <div className="image-label-tag">
               {currentScenario.images[activeImageIdx]?.label}
             </div>
-            <div className="image-hover-overlay">
-              <span className="overlay-text">🔍 Click to enlarge</span>
-            </div>
           </div>
 
           {/* 6 Named View Thumbnails */}
