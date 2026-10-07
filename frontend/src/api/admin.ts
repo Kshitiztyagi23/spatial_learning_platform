@@ -7,6 +7,12 @@ export interface PtsotConfig {
   shuffle: boolean;
 }
 
+export interface WindowConfig {
+  selected_questions: string[];
+  time_limit_seconds: number;   // 0 = untimed
+  shuffle: boolean;
+}
+
 export interface PerspectiveConfig {
   selected_scenarios: number[];
 }
@@ -59,6 +65,7 @@ export interface ProtocolData {
   ai_status?: AiStatus;
   enabled_stages: string[];
   ptsot_config: PtsotConfig;
+  window_config: WindowConfig;
   perspective_config: PerspectiveConfig;
   lego_config: LegoConfig;
   updated_at: string;
@@ -66,6 +73,7 @@ export interface ProtocolData {
 
 export interface CatalogsData {
   ptsot_questions: { number: number; label: string; standing: string }[];
+  window_questions: { id: string; set: 'easy' | 'hard'; number: number; has_answer: boolean }[];
   perspective_scenarios: { id: number; label: string; name: string }[];
   lego_puzzles: { id: string; name: string; tier: string }[];
 }

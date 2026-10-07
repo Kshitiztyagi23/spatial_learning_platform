@@ -17,13 +17,13 @@ def test_recommended_design():
     # Session 1 is the same for everyone, whatever the group, with no hints
     for group in ("unassigned", "experimental", "natural_control"):
         assert round_plan(s, group, 1) == {
-            "stages": ["intake_consent", "demographics", "spatial_experience", "ptsot", "done"], "feedback": []
+            "stages": ["intake_consent", "demographics", "spatial_experience", "ptsot", "window_test", "done"], "feedback": []
         }
     assert round_plan(s, "experimental", 2) == {"stages": TRAINING + ["done"], "feedback": TRAINING}
     assert round_plan(s, "control", 2) == {"stages": TRAINING + ["done"], "feedback": []}
     assert round_plan(s, "natural_control", 2)["stages"] == []          # skipped
     for group in ("experimental", "control", "natural_control"):
-        assert round_plan(s, group, 3) == {"stages": ["ptsot", "done"], "feedback": []}
+        assert round_plan(s, group, 3) == {"stages": ["ptsot", "window_test", "done"], "feedback": []}
 
 
 def test_normalize_repairs_a_bad_schedule():

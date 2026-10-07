@@ -2,7 +2,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
-TrialTaskType = Literal["ptsot", "spatial_perspective_taking"]
+TrialTaskType = Literal["ptsot", "spatial_perspective_taking", "window_test"]
 
 class TrialCreate(BaseModel):
     task_type: TrialTaskType = "ptsot"

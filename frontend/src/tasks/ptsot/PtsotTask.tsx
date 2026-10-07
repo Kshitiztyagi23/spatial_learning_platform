@@ -249,7 +249,8 @@ export function PtsotTask() {
   };
 
   const handleNext = () => {
-    if (currentIdx < QUESTION_DATA.length - 1) {
+    // Step through the protocol's selected questions, not the full bank
+    if (currentIdx < questions.length - 1) {
       setCurrentIdx(prev => prev + 1);
       questionStartTime.current = Date.now();
     } else {
@@ -282,7 +283,7 @@ export function PtsotTask() {
         <div className="ptsot-instruction-box">
           <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Instructions:</h3>
           <ul style={{ paddingLeft: '1.25rem', lineHeight: 1.6, color: 'var(--ink)' }}>
-            <li>The test has <b>12 questions</b> and a strict <b>5-minute time limit</b>.</li>
+            <li>The test has <b>{questions.length} questions</b> and a strict <b>{formatTime(timeLeft)} minute time limit</b>.</li>
             <li>Use the interactive dial to draw a line pointing toward the third object.</li>
             <li>Straight ahead (0°) represents the object you are facing.</li>
             <li><b>Do not switch tabs or leave this window</b> during the test. Violations will be recorded.</li>

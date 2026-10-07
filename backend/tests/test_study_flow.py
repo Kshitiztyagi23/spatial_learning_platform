@@ -10,7 +10,8 @@ from httpx import AsyncClient, ASGITransport
 from app.core.config import settings
 from app.main import app
 
-SESSION_1 = ["intake_consent", "demographics", "spatial_experience", "ptsot", "done"]
+SESSION_1 = ["intake_consent", "demographics", "spatial_experience", "ptsot", "window_test", "done"]
+POST_TEST = ["ptsot", "window_test", "done"]
 
 GROUP_ONLY = {
     "experimental": {"experimental": 100, "control": 0, "natural_control": 0},
@@ -163,7 +164,7 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
 
     # Session 3: post-test
     s3 = await _start(ac, p["id"])
-    assert (s3["round_number"], s3["stages"], s3["more_rounds"]) == (3, ["ptsot", "done"], False)
+    assert (s3["round_number"], s3["stages"], s3["more_rounds"]) == (3, POST_TEST, False)
     await ac.post(f"/api/v1/sessions/{s3['id']}/trials", json={
         "task_type": "ptsot", "trial_number": 1, "response_value": "100", "correct_response": "123",
     })
@@ -237,7 +238,7 @@ async def test_tests_only_group_goes_straight_to_post_test(ac, admin):
     await _assign(ac, admin)
     assert (await _lookup(ac, p["participant_code"]))["next_round"] == 4
     s = await _start(ac, p["id"])
-    assert (s["round_number"], s["stages"], s["more_rounds"]) == (4, ["ptsot", "done"], False)
+    assert (s["round_number"], s["stages"], s["more_rounds"]) == (4, POST_TEST, False)
 
 
 @pytest.mark.asyncio
@@ -311,3 +312,82 @@ async def test_admin_api_rejects_missing_or_forged_tokens(ac):
     assert (await ac.post("/api/v1/admin/assign-groups")).status_code == 401
     forged = {"Authorization": "Bearer 9999999999.not-a-signature"}
     assert (await ac.get("/api/v1/admin/exports/participants", headers=forged)).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_window_test_selection_scoring_and_late_answer_key(ac, admin, monkeypatch):
+    from app.services import window_test
+
+    res = await ac.put("/api/v1/admin/protocol", headers=admin, json={
+        "condition_split": GROUP_ONLY["control"],
+        "window_config": {"selected_questions": ["hard-03", "easy-01", "bogus"], "time_limit_seconds": 240},
+        "ptsot_config": {}, "perspective_config": {}, "lego_config": {},
+    })
+    # Unknown ids dropped, bank order kept
+    assert res.json()["window_config"]["selected_questions"] == ["easy-01", "hard-03"]
+    catalog = (await ac.get("/api/v1/admin/catalogs", headers=admin)).json()["window_questions"]
+    assert len(catalog) == 24 and {q["set"] for q in catalog} == {"easy", "hard"}
+
+    p = await _participant(ac)
+    s = await _start(ac, p["id"])
+    cfg = (await ac.get(f"/api/v1/sessions/{s['id']}/task-config/window_test")).json()
+    assert (cfg["selected_questions"], cfg["time_limit_seconds"]) == (["easy-01", "hard-03"], 240)
+
+    # Answer recorded before the key exists: stored, not scored. The client
+    # can't supply the correct answer itself.
+    before = (await ac.post(f"/api/v1/sessions/{s['id']}/trials", json={
+        "task_type": "window_test", "trial_number": 1, "stimulus_id": "easy-01",
+        "response_value": "B", "correct_response": "B", "reaction_time_ms": 5000,
+    })).json()
+    assert before["correct"] is None
+
+    # Key filled in later: new answers are scored, and the export re-scores old ones
+    monkeypatch.setitem(window_test.WINDOW_ANSWER_KEY, "easy-01", "B")
+    monkeypatch.setitem(window_test.WINDOW_ANSWER_KEY, "hard-03", "C")
+    after = (await ac.post(f"/api/v1/sessions/{s['id']}/trials", json={
+        "task_type": "window_test", "trial_number": 2, "stimulus_id": "hard-03",
+        "response_value": "A", "reaction_time_ms": 7000,
+    })).json()
+    assert after["correct"] is False
+
+    rows = _rows((await ac.get("/api/v1/admin/exports/window_trials", headers=admin)).text)
+    assert [(r["question_id"], r["question_set"], r["correct_answer"], r["response"], r["correct"]) for r in rows] == [
+        ("easy-01", "easy", "B", "B", "True"),
+        ("hard-03", "hard", "C", "A", "False"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_intake_does_the_details_form_in_one_request(ac, admin):
+    res = await ac.post("/api/v1/participants/intake", json={
+        "name": "Asha Rao", "age": 12, "gender": "female", "grade": "Grade 7",
+        "section": "A", "roll_no": "7", "consent": True,
+        "demographics": {"grade": "Grade 7", "section": "A"},
+    })
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["participant"]["condition"] == "unassigned" and len(body["participant"]["participant_code"]) == 6
+    s = body["session"]
+    # Consent and details are already recorded; the student continues at the survey
+    assert (s["round_number"], s["current_stage"]) == (1, "spatial_experience")
+    assert await _finish(ac, s["id"]) == ["spatial_experience", "ptsot", "window_test", "done"]
+    # Same student submitting again gets a new participant record, not a clash
+    again = await ac.post("/api/v1/participants/intake", json={
+        "name": "Asha Rao", "age": 12, "gender": "female", "grade": "Grade 7",
+        "section": "A", "roll_no": "7", "consent": True,
+    })
+    assert again.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_intake_retries_when_a_code_clashes(ac, monkeypatch):
+    from app.api.v1 import participants as module
+    first = (await ac.post("/api/v1/participants/intake", json={
+        "name": "First", "age": 12, "gender": "female", "grade": "Grade 7", "section": "A", "roll_no": "1", "consent": True,
+    })).json()["participant"]["participant_code"]
+    codes = iter([first, "ZZZZZZ"])          # first try clashes, second is fresh
+    monkeypatch.setattr(module, "generate_participant_code", lambda: next(codes))
+    res = await ac.post("/api/v1/participants/intake", json={
+        "name": "Second", "age": 12, "gender": "female", "grade": "Grade 7", "section": "A", "roll_no": "2", "consent": True,
+    })
+    assert res.status_code == 200 and res.json()["participant"]["participant_code"] == "ZZZZZZ"

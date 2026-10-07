@@ -8,6 +8,7 @@ const ROUTE_STAGE_MAP: Record<string, string> = {
   '/demographics': 'demographics',
   '/experience': 'spatial_experience',
   '/ptsot': 'ptsot',
+  '/window-test': 'window_test',
   '/perspective': 'spatial_perspective_taking',
   '/lego': 'lego',
   '/done': 'done',

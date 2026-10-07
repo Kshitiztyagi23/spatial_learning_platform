@@ -9,6 +9,7 @@ import { SpatialExperiencePage } from './tasks/intake/SpatialExperiencePage';
 import { ReturnPage } from './tasks/intake/ReturnPage';
 import { PtsotTask } from './tasks/ptsot/PtsotTask';
 import { PerspectiveTask } from './tasks/perspective/PerspectiveTask';
+import { WindowTask } from './tasks/window/WindowTask';
 import { LegoTask } from './tasks/lego/LegoTask';
 import { DonePage } from './tasks/done/DonePage';
 import { AdminDashboard } from './admin/AdminDashboard';
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
       {
         path: 'ptsot',
         element: <PtsotTask />,
+      },
+      {
+        path: 'window-test',
+        element: <WindowTask />,
       },
       {
         path: 'perspective',

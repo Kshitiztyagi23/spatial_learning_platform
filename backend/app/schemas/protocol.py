@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Dict, List, Optional
 from datetime import datetime
+from app.services.window_test import WINDOW_QUESTION_IDS
 from app.models.protocol import ALL_LEGO_PUZZLE_IDS, normalize_puzzle_ids, normalize_stages
 
 class PasscodeVerifyIn(BaseModel):
@@ -15,6 +16,17 @@ class PtsotConfig(BaseModel):
     selected_questions: List[int] = Field(default_factory=lambda: list(range(1, 13)))
     time_limit_seconds: int = 300
     shuffle: bool = False
+
+class WindowConfig(BaseModel):
+    selected_questions: List[str] = Field(default_factory=lambda: list(WINDOW_QUESTION_IDS))
+    time_limit_seconds: int = Field(ge=0, default=0)   # 0 = untimed
+    shuffle: bool = False
+
+    @field_validator("selected_questions")
+    @classmethod
+    def _known_ids(cls, v: List[str]) -> List[str]:
+        known = set(WINDOW_QUESTION_IDS)
+        return [q for q in WINDOW_QUESTION_IDS if q in set(v) & known]
 
 class PerspectiveConfig(BaseModel):
     selected_scenarios: List[int] = Field(default_factory=lambda: list(range(1, 9)))
@@ -59,6 +71,7 @@ class ProtocolUpdateIn(BaseModel):
     # Derived from the schedule on save; accepted for older clients
     enabled_stages: List[str] = []
     ptsot_config: PtsotConfig
+    window_config: WindowConfig = Field(default_factory=WindowConfig)
     perspective_config: PerspectiveConfig
     lego_config: LegoConfig
 
@@ -78,6 +91,7 @@ class ProtocolOut(BaseModel):
     ai_status: Dict[str, Optional[object]] = {}
     enabled_stages: List[str]
     ptsot_config: PtsotConfig
+    window_config: WindowConfig
     perspective_config: PerspectiveConfig
     lego_config: LegoConfig
     updated_at: datetime

@@ -1,11 +1,18 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 
 from app.core.database import get_db
 from app.models.participant import Participant
-from app.schemas.participant import ParticipantCreate, ParticipantLookupIn, ParticipantLookupOut, ParticipantOut
+from app.schemas.participant import IntakeIn, ParticipantCreate, ParticipantLookupIn, ParticipantLookupOut, ParticipantOut
+from app.schemas.session import SessionOut
+from app.api.v1.sessions import session_out
+from app.services.session_flow import record_stage, start_round
+from pydantic import BaseModel
 from app.services.orchestration import get_or_create_active_protocol, protocol_schedule, protocol_total_rounds
 from app.services.rounds import open_session, progress
 from app.services.study_design import UNASSIGNED, generate_participant_code, normalize_code
@@ -42,6 +49,48 @@ async def create_participant(
     await db.refresh(participant)
 
     return participant
+
+
+class IntakeOut(BaseModel):
+    participant: ParticipantOut
+    session: SessionOut
+
+
+@router.post("/intake", response_model=IntakeOut)
+async def intake(payload: IntakeIn, db: AsyncSession = Depends(get_db)):
+    """The details form in one request: create the participant, start
+    session 1, and record consent and details as complete, in one
+    transaction (each round trip to the database costs ~0.3 s)."""
+    protocol = await get_or_create_active_protocol(db)
+    # Everything is written in one commit at the end. A random code clashing
+    # is ~1 in a billion; the unique constraint catches it and we retry.
+    for attempt in range(3):
+        participant = Participant(
+            id=str(uuid.uuid4()),
+            **payload.model_dump(exclude={"demographics"}),
+            external_id=str(uuid.uuid4())[:8].upper(),
+            participant_code=generate_participant_code(),
+            condition=UNASSIGNED,
+            created_at=datetime.utcnow(),
+        )
+        db.add(participant)
+        session = await start_round(participant, protocol, db, new_participant=True)
+        if session.current_stage == "intake_consent":
+            record_stage(session, "intake_consent", {"consent": True}, db)
+        record_stage(session, "demographics", payload.demographics, db)
+        try:
+            await db.commit()
+            break
+        except IntegrityError:
+            await db.rollback()
+            if attempt == 2:
+                raise HTTPException(status_code=500, detail="Could not allocate a participant code")
+            protocol = await get_or_create_active_protocol(db)  # rollback expired it
+
+    return IntakeOut(
+        participant=ParticipantOut.model_validate(participant),
+        session=session_out(session, participant, protocol_total_rounds(protocol), protocol_schedule(protocol)),
+    )
 
 
 @router.post("/lookup", response_model=ParticipantLookupOut)

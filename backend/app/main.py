@@ -55,3 +55,24 @@ app.include_router(trials_router, prefix="/api/v1")
 app.include_router(lego_router, prefix="/api/v1")
 app.include_router(feedback_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+
+# ---- Built frontend (production / demo) --------------------------------------
+# When frontend/dist exists (after `npm run build`), the backend also serves the
+# app, so students and the admin console share one URL with the API and no
+# CORS setup. Unknown paths get index.html so React Router can handle
+# /admin, /lego, ... on a page refresh. In development Vite serves the app.
+from pathlib import Path
+from fastapi import HTTPException
+from fastapi.responses import FileResponse
+
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+if FRONTEND_DIST.is_dir():
+    @app.get("/{path:path}", include_in_schema=False)
+    async def serve_frontend(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        file = (FRONTEND_DIST / path).resolve()
+        if path and file.is_file() and FRONTEND_DIST in file.parents:
+            return FileResponse(file)
+        return FileResponse(FRONTEND_DIST / "index.html")

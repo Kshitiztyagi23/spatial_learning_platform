@@ -6,6 +6,7 @@ from app.models.trial import Trial
 from app.models.response import Response
 from app.schemas.trial import TrialCreate, TrialOut
 from app.services.scoring import score_trial
+from app.services.window_test import window_correct_answer
 from app.services.task_instances import get_or_create_task_instance
 
 router = APIRouter(prefix="/sessions/{session_id}/trials", tags=["trials"])
@@ -18,16 +19,20 @@ async def create_trial(
     db: AsyncSession = Depends(get_db)
 ):
     ti = await get_or_create_task_instance(session_id, trial_in.task_type, db)
+    correct_response = trial_in.correct_response
+    if trial_in.task_type == "window_test":
+        # The window answer key lives only on the server
+        correct_response = window_correct_answer(trial_in.stimulus_id)
     trial = Trial(
         task_instance_id=ti.id,
         trial_number=trial_in.trial_number,
         stimulus_id=trial_in.stimulus_id,
-        correct_response=trial_in.correct_response
+        correct_response=correct_response
     )
     db.add(trial)
     await db.flush()
 
-    correct = score_trial(trial_in.task_type, trial_in.response_value, trial_in.correct_response)
+    correct = score_trial(trial_in.task_type, trial_in.response_value, correct_response)
 
     response_record = Response(
         trial_id=trial.id,

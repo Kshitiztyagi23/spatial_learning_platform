@@ -1,8 +1,12 @@
 import { apiClient } from './client'
-import type { ParticipantCreate, ParticipantLookupOut, ParticipantOut } from './types'
+import type { ParticipantCreate, ParticipantLookupOut, ParticipantOut, SessionOut } from './types'
 
-export async function createParticipant(data: ParticipantCreate): Promise<ParticipantOut> {
-  const res = await apiClient.post<ParticipantOut>('/participants', data)
+/** The details form in one request: participant + session 1 + consent and
+ *  details recorded. Returns the session already moved past them. */
+export async function intake(
+  data: ParticipantCreate & { demographics: Record<string, unknown> }
+): Promise<{ participant: ParticipantOut; session: SessionOut }> {
+  const res = await apiClient.post('/participants/intake', data)
   return res.data
 }
 

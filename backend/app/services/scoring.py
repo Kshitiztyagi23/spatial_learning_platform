@@ -19,7 +19,7 @@ def score_trial(task_type: str, response: str, correct: str | None) -> bool | No
     if task_type == "ptsot":
         err = angular_error(response, correct)
         return None if err is None else err <= PTSOT_TOLERANCE_DEG
-    if task_type == "spatial_perspective_taking":
+    if task_type in ("spatial_perspective_taking", "window_test"):
         return response.strip().lower() == correct.strip().lower()
     return None
 

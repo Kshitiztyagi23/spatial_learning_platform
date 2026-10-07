@@ -5,6 +5,7 @@ const ALL_STEPS = [
   { id: 'demographics', label: 'Details' },
   { id: 'spatial_experience', label: 'Experience' },
   { id: 'ptsot', label: 'PTSOT' },
+  { id: 'window_test', label: 'Window' },
   { id: 'spatial_perspective_taking', label: 'Perspective' },
   { id: 'lego', label: 'LEGO' },
   { id: 'done', label: 'Done' }

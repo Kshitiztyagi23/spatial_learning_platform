@@ -90,24 +90,38 @@ export function DataExportsTab() {
       />
 
       <ExportCard
-        title="3. Spatial Perspective Taking Trials"
+        title="3. Window Test Trials"
+        description="Per-question answers for the easy and hard window sets: question id and set, chosen option, correct option, correctness flag, and reaction time (ms). Re-scored against the current answer key on every download."
+        exportType="window_trials"
+        badge="Mental Rotation"
+      />
+
+      <ExportCard
+        title="4. Spatial Perspective Taking Trials"
         description="Per-question answers for the park scenarios: chosen direction, correct direction, correctness flag, and reaction time (ms)."
         exportType="perspective_trials"
         badge="Scenarios"
       />
 
       <ExportCard
-        title="4. 3D LEGO Interaction Logs"
+        title="5. 3D LEGO Interaction Logs"
         description="Comprehensive real-time telemetry: every block placement, removal, rotation, coordinates, and timestamp."
         exportType="lego_events"
         badge="3D Telemetry"
       />
 
       <ExportCard
-        title="5. LEGO Final Submissions"
+        title="6. LEGO Final Submissions"
         description="Final build evaluations: duration in seconds, shape accuracy, and efficiency metrics."
         exportType="lego_submissions"
         badge="Summary Scores"
+      />
+
+      <ExportCard
+        title="7. Feedback Events"
+        description="Every hint shown: task, rule, whether AI or the fixed rule wrote it, the message, and whether the student corrected the error afterwards."
+        exportType="feedback_events"
+        badge="Feedback"
       />
     </div>
   );
