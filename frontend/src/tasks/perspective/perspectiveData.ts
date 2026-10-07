@@ -6,12 +6,12 @@ const DEFAULT_OPTIONS: DirectionOption[] = ['Right', 'Left', 'Front', 'Behind'];
 function createScenarioImages(scenarioId: number) {
   const base = `/perspective/templates/scenario_${scenarioId}`;
   return [
-    { id: 1, label: 'Main View 1', src: `${base}/main_view_1.svg`, description: 'Overall scene overview' },
-    { id: 2, label: 'Main View 2', src: `${base}/main_view_2.svg`, description: 'Secondary scene perspective' },
-    { id: 3, label: "A's Perspective", src: `${base}/perspective_a.svg`, description: 'Point of view of character A' },
-    { id: 4, label: "B's Perspective", src: `${base}/perspective_b.svg`, description: 'Point of view of character B' },
-    { id: 5, label: "C's Perspective", src: `${base}/perspective_c.svg`, description: 'Point of view of character C' },
-    { id: 6, label: "D's Perspective", src: `${base}/perspective_d.svg`, description: 'Point of view of character D' },
+    { id: 1, label: 'Main View 1', src: `${base}/main_view_1.png`, description: 'Overall scene overview' },
+    { id: 2, label: 'Main View 2', src: `${base}/main_view_2.png`, description: 'Secondary scene perspective' },
+    { id: 3, label: "A's Perspective", src: `${base}/perspective_a.png`, description: 'Point of view of character A' },
+    { id: 4, label: "B's Perspective", src: `${base}/perspective_b.png`, description: 'Point of view of character B' },
+    { id: 5, label: "C's Perspective", src: `${base}/perspective_c.png`, description: 'Point of view of character C' },
+    { id: 6, label: "D's Perspective", src: `${base}/perspective_d.png`, description: 'Point of view of character D' },
   ];
 }
 
