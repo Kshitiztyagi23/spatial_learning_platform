@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/Button';
 import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
-import { completeStage } from '../../api/sessions';
+import { completeStage, getNextStage } from '../../api/sessions';
+import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 
 const Q1_OPTIONS = ["Never", "A few times a year", "A few times a month", "Every week"];
 const Q2_OPTIONS = ["Very difficult", "Somewhat difficult", "Somewhat easy", "Very easy"];
@@ -34,8 +35,10 @@ export function SpatialExperiencePage() {
         stage_name: 'spatial_experience',
         payload: { q1, q2, q3 }
       });
-      setSession({ currentStage: 'ptsot' });
-      navigate('/ptsot');
+      const next = await getNextStage(sessionId);
+      setSession({ currentStage: next.stage_name });
+      const route = STAGE_ROUTES[next.stage_name as Stage] || '/ptsot';
+      navigate(route);
     } catch (err: any) {
       setError(err.message || "Failed to submit responses");
     } finally {

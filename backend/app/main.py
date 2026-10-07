@@ -7,6 +7,7 @@ from app.api.v1.sessions import router as sessions_router
 from app.api.v1.stages import router as stages_router
 from app.api.v1.trials import router as trials_router
 from app.api.v1.lego import router as lego_router
+from app.api.v1.admin import router as admin_router
 
 app = FastAPI(
     title="Adaptive Spatial Learning Platform API",
@@ -31,3 +32,4 @@ app.include_router(sessions_router, prefix="/api/v1")
 app.include_router(stages_router, prefix="/api/v1")
 app.include_router(trials_router, prefix="/api/v1")
 app.include_router(lego_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")

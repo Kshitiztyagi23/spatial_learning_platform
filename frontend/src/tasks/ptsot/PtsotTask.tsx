@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { AnglePicker } from './AnglePicker';
 import { Button } from '../../shared/Button';
 import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
-import { completeStage } from '../../api/sessions';
+import { completeStage, getNextStage } from '../../api/sessions';
+import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
 import './ptsot.css';
 
@@ -119,6 +120,9 @@ export function PtsotTask() {
   const [showPractice1Exp, setShowPractice1Exp] = useState(false);
   const [showPractice2Exp, setShowPractice2Exp] = useState(false);
 
+  // Dynamic question pool state
+  const [questions, setQuestions] = useState<QuestionData[]>(QUESTION_DATA);
+
   // Test state
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -130,6 +134,27 @@ export function PtsotTask() {
 
   const questionStartTime = useRef(Date.now());
   const timerRef = useRef<any>(null);
+
+  // Fetch task configuration (active questions & duration) from session protocol
+  useEffect(() => {
+    if (!sessionId) return;
+    apiClient.get(`/sessions/${sessionId}/task-config/ptsot`)
+      .then(res => {
+        const cfg = res.data;
+        if (cfg.selected_questions && Array.isArray(cfg.selected_questions)) {
+          const filtered = QUESTION_DATA.filter(q => cfg.selected_questions.includes(q.number));
+          if (filtered.length > 0) {
+            setQuestions(filtered);
+          }
+        }
+        if (cfg.time_limit_seconds && typeof cfg.time_limit_seconds === 'number') {
+          setTimeLeft(cfg.time_limit_seconds);
+        }
+      })
+      .catch(err => {
+        console.warn('Using default PTSOT config:', err);
+      });
+  }, [sessionId]);
 
   // Anti-cheat tab switch detection
   useEffect(() => {
@@ -155,8 +180,8 @@ export function PtsotTask() {
 
     if (sessionId) {
       try {
-        // Send trial records to backend
-        for (const q of QUESTION_DATA) {
+        // Send trial records to backend for active questions
+        for (const q of questions) {
           const ans = finalAnswers[q.number];
           const rt = finalReactionTimes[q.number] || 0;
           if (ans !== undefined) {
@@ -177,22 +202,24 @@ export function PtsotTask() {
             tab_switches: tabSwitchCount,
             answers: finalAnswers,
             time_remaining: timeLeft,
-            completed_all: Object.keys(finalAnswers).length === QUESTION_DATA.length
+            completed_all: Object.keys(finalAnswers).length === questions.length
           }
         });
 
-        setSession({ currentStage: 'spatial_perspective_taking' });
-        navigate('/perspective');
+        // Resolve next stage dynamically from protocol
+        const next = await getNextStage(sessionId);
+        setSession({ currentStage: next.stage_name });
+        const route = STAGE_ROUTES[next.stage_name as Stage] || '/perspective';
+        navigate(route);
       } catch (err) {
         console.error('Failed to submit PTSOT trials:', err);
-        setSession({ currentStage: 'spatial_perspective_taking' });
-        navigate('/perspective');
+        const route = STAGE_ROUTES['spatial_perspective_taking'] || '/perspective';
+        navigate(route);
       }
     } else {
-      setSession({ currentStage: 'spatial_perspective_taking' });
       navigate('/perspective');
     }
-  }, [answers, reactionTimes, isSubmitting, sessionId, tabSwitchCount, timeLeft, setSession, navigate]);
+  }, [answers, reactionTimes, isSubmitting, sessionId, tabSwitchCount, timeLeft, questions, setSession, navigate]);
 
   // 5-minute countdown timer
   useEffect(() => {
@@ -383,15 +410,15 @@ export function PtsotTask() {
   }
 
   // 4. Main Timed Test
-  const currentQ = QUESTION_DATA[currentIdx];
-  const currentAnswer = answers[currentQ.number];
+  const currentQ = questions[currentIdx] || questions[0];
+  const currentAnswer = currentQ ? answers[currentQ.number] : undefined;
 
   return (
     <div className="ptsot-container">
       {/* Sticky Timer Header */}
       <div className="ptsot-timer-bar">
         <div className="ptsot-timer-info">
-          <span>Question <b>{currentIdx + 1}</b> of {QUESTION_DATA.length}</span>
+          <span>Question <b>{currentIdx + 1}</b> of {questions.length}</span>
         </div>
         <div className={`ptsot-countdown ${timeLeft < 60 ? 'urgent' : ''}`}>
           ⏱ {formatTime(timeLeft)}
@@ -436,7 +463,7 @@ export function PtsotTask() {
             disabled={currentAnswer === undefined}
             onClick={handleNext}
           >
-            {currentIdx === QUESTION_DATA.length - 1 ? 'Submit Test ✓' : 'Next Question →'}
+            {currentIdx === questions.length - 1 ? 'Submit Test ✓' : 'Next Question →'}
           </Button>
         </div>
       </div>

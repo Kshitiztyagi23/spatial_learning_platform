@@ -10,3 +10,4 @@ from .lego_event import LegoEvent
 from .lego_submission import LegoSubmission
 from .adaptation_decision import AdaptationDecision
 from .audit_log import AuditLog
+from .protocol import StudyProtocol

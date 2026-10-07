@@ -15,3 +15,4 @@ class Session(Base):
     condition: Mapped[str] = mapped_column(String, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    stage_sequence_json: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -14,7 +14,8 @@ import { Toolbar } from './ui/Toolbar';
 import { Feedback } from './ui/Feedback';
 import { Button } from '../../shared/Button';
 import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
-import { completeStage } from '../../api/sessions';
+import { completeStage, getNextStage } from '../../api/sessions';
+import { STAGE_ROUTES, type Stage as StudyStage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
 
 export function LegoTask() {
@@ -84,15 +85,16 @@ export function LegoTask() {
           }
         });
 
-        setSession({ currentStage: 'done' });
-        navigate('/done');
+        const next = await getNextStage(sessionId);
+        setSession({ currentStage: next.stage_name });
+        const route = STAGE_ROUTES[next.stage_name as StudyStage] || '/done';
+        navigate(route);
       } catch (err) {
         console.error('Failed to submit LEGO task:', err);
-        setSession({ currentStage: 'done' });
-        navigate('/done');
+        const route = STAGE_ROUTES['done'] || '/done';
+        navigate(route);
       }
     } else {
-      setSession({ currentStage: 'done' });
       navigate('/done');
     }
   };

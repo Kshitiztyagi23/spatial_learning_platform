@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { Button } from '../../shared/Button';
 import { useSessionDispatch } from '../../orchestration/SessionContext';
 import { createParticipant } from '../../api/participants';
-import { createSession, completeStage } from '../../api/sessions';
+import { createSession, completeStage, getNextStage } from '../../api/sessions';
+import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 
 const demographicsSchema = z.object({
   grade: z.string().min(1, "Grade is required"),
@@ -76,8 +77,10 @@ export function DemographicsPage() {
         payload: { ...data } 
       });
 
-      setSession({ currentStage: 'spatial_experience' });
-      navigate('/experience');
+      const next = await getNextStage(session.id);
+      setSession({ currentStage: next.stage_name });
+      const route = STAGE_ROUTES[next.stage_name as Stage] || '/experience';
+      navigate(route);
     } catch (err: any) {
       setApiError(err.message || 'Failed to submit data');
     } finally {

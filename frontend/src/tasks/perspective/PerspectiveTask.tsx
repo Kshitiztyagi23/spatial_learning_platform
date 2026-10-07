@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
-import { completeStage } from '../../api/sessions';
+import { completeStage, getNextStage } from '../../api/sessions';
+import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
 import { SCENARIOS } from './perspectiveData';
 import { DirectionOption } from './types';
@@ -15,6 +16,9 @@ export function PerspectiveTask() {
   // Phase: 'instructions' | 'testing'
   const [phase, setPhase] = useState<'instructions' | 'testing'>('instructions');
 
+  // Dynamic scenarios state
+  const [scenarios, setScenarios] = useState(SCENARIOS);
+
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [questionIdx, setQuestionIdx] = useState(0);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
@@ -25,8 +29,26 @@ export function PerspectiveTask() {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImgIdx, setLightboxImgIdx] = useState(0);
 
-  const currentScenario = SCENARIOS[scenarioIdx];
-  const currentQuestion = currentScenario.questions[questionIdx];
+  // Load perspective configuration for this session
+  useEffect(() => {
+    if (!sessionId) return;
+    apiClient.get(`/sessions/${sessionId}/task-config/spatial_perspective_taking`)
+      .then(res => {
+        const cfg = res.data;
+        if (cfg.selected_scenarios && Array.isArray(cfg.selected_scenarios)) {
+          const filtered = SCENARIOS.filter(s => cfg.selected_scenarios.includes(s.id));
+          if (filtered.length > 0) {
+            setScenarios(filtered);
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('Using default perspective scenarios:', err);
+      });
+  }, [sessionId]);
+
+  const currentScenario = scenarios[scenarioIdx] || scenarios[0];
+  const currentQuestion = currentScenario.questions[questionIdx] || currentScenario.questions[0];
   const questionKey = `${currentScenario.id}_${currentQuestion.id}`;
   const selectedAnswer = answers[questionKey];
 
@@ -118,26 +140,27 @@ export function PerspectiveTask() {
         await completeStage(sessionId, {
           stage_name: 'spatial_perspective_taking',
           payload: {
-            total_scenarios: SCENARIOS.length,
+            total_scenarios: scenarios.length,
             answered_count: Object.keys(answers).length,
             answers
           }
         });
 
-        setSession({ currentStage: 'lego' });
-        navigate('/lego');
+        const next = await getNextStage(sessionId);
+        setSession({ currentStage: next.stage_name });
+        const route = STAGE_ROUTES[next.stage_name as Stage] || '/lego';
+        navigate(route);
       } catch (err) {
         console.error('Failed to submit perspective test:', err);
-        setSession({ currentStage: 'lego' });
-        navigate('/lego');
+        const route = STAGE_ROUTES['lego'] || '/lego';
+        navigate(route);
       }
     } else {
-      setSession({ currentStage: 'lego' });
       navigate('/lego');
     }
   };
 
-  // Fast-forward / Dev Skip directly to LEGO
+  // Fast-forward / Dev Skip directly to next task
   const handleDevSkip = async () => {
     if (sessionId) {
       try {
@@ -145,15 +168,19 @@ export function PerspectiveTask() {
           stage_name: 'spatial_perspective_taking',
           payload: { skipped: true }
         });
+        const next = await getNextStage(sessionId);
+        setSession({ currentStage: next.stage_name });
+        const route = STAGE_ROUTES[next.stage_name as Stage] || '/lego';
+        navigate(route);
+        return;
       } catch (e) {
         // ignore in dev
       }
     }
-    setSession({ currentStage: 'lego' });
     navigate('/lego');
   };
 
-  const isLastQuestionOfTest = scenarioIdx === SCENARIOS.length - 1 && questionIdx === currentScenario.questions.length - 1;
+  const isLastQuestionOfTest = scenarioIdx === scenarios.length - 1 && questionIdx === currentScenario.questions.length - 1;
   const isFirstQuestionOfTest = scenarioIdx === 0 && questionIdx === 0;
 
   const totalAnsweredForScenario = currentScenario.questions.filter(

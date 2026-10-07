@@ -9,6 +9,7 @@ import { PtsotTask } from './tasks/ptsot/PtsotTask';
 import { PerspectiveTask } from './tasks/perspective/PerspectiveTask';
 import { LegoTask } from './tasks/lego/LegoTask';
 import { DonePage } from './tasks/done/DonePage';
+import { AdminDashboard } from './admin/AdminDashboard';
 
 function RootLayout() {
   return (
@@ -52,6 +53,10 @@ const router = createBrowserRouter([
         element: <DonePage />,
       }
     ]
+  },
+  {
+    path: '/admin',
+    element: <AdminDashboard />,
   }
 ]);
 
