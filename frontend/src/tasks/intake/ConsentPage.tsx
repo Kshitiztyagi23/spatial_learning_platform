@@ -1,13 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/Button';
 import { useSessionDispatch } from '../../orchestration/SessionContext';
+import { apiClient } from '../../api/client';
+import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 
 export function ConsentPage() {
   const [name, setName] = useState('');
   const [consent, setConsent] = useState(false);
+  const [checkingProtocol, setCheckingProtocol] = useState(true);
   const navigate = useNavigate();
   const setSession = useSessionDispatch();
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.get('/protocol/active', { params: { _t: Date.now() } })
+      .then((res) => {
+        if (!isMounted) return;
+        const stages: string[] = res.data?.enabled_stages || [];
+        setSession({ enabledStages: stages });
+        if (stages.length > 0 && !stages.includes('intake_consent')) {
+          const firstStage = (res.data.first_stage as Stage) || 'demographics';
+          const targetRoute = STAGE_ROUTES[firstStage] || '/demographics';
+          navigate(targetRoute, { replace: true });
+        } else {
+          setCheckingProtocol(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load active protocol:', err);
+        if (isMounted) setCheckingProtocol(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate, setSession]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,6 +46,14 @@ export function ConsentPage() {
   };
 
   const isFormValid = name.trim().length > 0 && consent;
+
+  if (checkingProtocol) {
+    return (
+      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>
+        <p>Loading session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="card">

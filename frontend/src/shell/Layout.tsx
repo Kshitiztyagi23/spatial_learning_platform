@@ -14,7 +14,7 @@ const ROUTE_STAGE_MAP: Record<string, string> = {
 };
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { currentStage } = useSessionContext();
+  const { currentStage, enabledStages } = useSessionContext();
   const location = useLocation();
   
   // Resolve stage from context or current pathname
@@ -41,7 +41,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
       
       <div style={{ flexShrink: 0 }}>
-        <ProgressBar currentStage={displayStage} />
+        <ProgressBar currentStage={displayStage} enabledStages={enabledStages} />
       </div>
 
       <main style={{ 

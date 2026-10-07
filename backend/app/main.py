@@ -23,9 +23,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import json
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.services.orchestration import get_or_create_active_protocol
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+@app.get("/api/v1/protocol/active")
+async def get_active_protocol_public(db: AsyncSession = Depends(get_db)):
+    protocol = await get_or_create_active_protocol(db)
+    stages = json.loads(protocol.enabled_stages_json)
+    first_stage = stages[0] if stages else "intake_consent"
+    return {
+        "enabled_stages": stages,
+        "first_stage": first_stage,
+        "ai_feedback_percentage": protocol.ai_feedback_percentage
+    }
 
 app.include_router(participants_router, prefix="/api/v1")
 app.include_router(sessions_router, prefix="/api/v1")

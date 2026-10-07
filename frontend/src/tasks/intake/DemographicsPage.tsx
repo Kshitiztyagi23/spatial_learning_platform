@@ -30,7 +30,8 @@ export function DemographicsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const setSession = useSessionDispatch();
-  const name = location.state?.name || "Anonymous";
+  const passedName = location.state?.name || "";
+  const [enteredName, setEnteredName] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -47,11 +48,17 @@ export function DemographicsPage() {
   const selectedGrade = watch("grade");
 
   const onSubmit = async (data: DemographicsFormValues) => {
+    const finalName = passedName.trim() || enteredName.trim();
+    if (!finalName) {
+      setApiError('Please enter your full name');
+      return;
+    }
+
     setLoading(true);
     setApiError('');
     try {
       const participant = await createParticipant({
-        name,
+        name: finalName,
         age: data.age,
         gender: data.gender,
         grade: data.grade,
@@ -65,16 +72,18 @@ export function DemographicsPage() {
       const session = await createSession({ participant_id: participant.id });
       setSession({ sessionId: session.id, currentStage: session.current_stage });
 
-      // Record consent stage completion
-      await completeStage(session.id, { 
-        stage_name: 'intake_consent', 
-        payload: { consent: true } 
-      });
+      // Record consent stage completion ONLY if consent is part of the session sequence
+      if (session.current_stage === 'intake_consent') {
+        await completeStage(session.id, { 
+          stage_name: 'intake_consent', 
+          payload: { consent: true } 
+        });
+      }
 
       // Record demographics stage completion
       await completeStage(session.id, { 
         stage_name: 'demographics', 
-        payload: { ...data } 
+        payload: { ...data, name: finalName } 
       });
 
       const next = await getNextStage(session.id);
@@ -94,6 +103,23 @@ export function DemographicsPage() {
       {apiError && <div style={{ color: 'var(--error)', marginBottom: '1rem' }}>{apiError}</div>}
       
       <form onSubmit={handleSubmit(onSubmit)}>
+        {!passedName ? (
+          <div className="form-group">
+            <label>Your Full Name *</label>
+            <input 
+              type="text" 
+              value={enteredName} 
+              onChange={(e) => setEnteredName(e.target.value)} 
+              placeholder="Enter your full name" 
+              required
+            />
+          </div>
+        ) : (
+          <div style={{ marginBottom: '1.25rem', padding: '0.6rem 0.85rem', backgroundColor: 'rgba(37, 99, 235, 0.05)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '0.95rem' }}>
+            Participant: <strong>{passedName}</strong>
+          </div>
+        )}
+
         <div className="form-group">
           <label>Grade</label>
           <select {...register("grade")}>

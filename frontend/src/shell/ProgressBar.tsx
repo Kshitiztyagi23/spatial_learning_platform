@@ -1,6 +1,6 @@
 import React from 'react';
 
-const STEPS = [
+const ALL_STEPS = [
   { id: 'intake_consent', label: 'Consent' },
   { id: 'demographics', label: 'Details' },
   { id: 'spatial_experience', label: 'Experience' },
@@ -10,10 +10,24 @@ const STEPS = [
   { id: 'done', label: 'Done' }
 ];
 
-export function ProgressBar({ currentStage }: { currentStage: string }) {
-  const currentIndex = STEPS.findIndex(s => s.id === currentStage) >= 0 
-    ? STEPS.findIndex(s => s.id === currentStage) 
+interface ProgressBarProps {
+  currentStage: string;
+  enabledStages?: string[] | null;
+}
+
+export function ProgressBar({ currentStage, enabledStages }: ProgressBarProps) {
+  const steps = enabledStages && enabledStages.length > 0
+    ? ALL_STEPS.filter(s => enabledStages.includes(s.id) || s.id === 'done')
+    : ALL_STEPS;
+
+  const currentIndex = steps.findIndex(s => s.id === currentStage) >= 0 
+    ? steps.findIndex(s => s.id === currentStage) 
     : 0;
+
+  const totalSteps = Math.max(1, steps.length - 1);
+  const progressPercent = totalSteps > 1
+    ? (Math.min(currentIndex, totalSteps - 1) / (totalSteps - 1)) * 100
+    : 100;
 
   return (
     <div style={{ backgroundColor: 'var(--sheet)', padding: '0.75rem 2rem', borderBottom: '1px solid var(--border)' }}>
@@ -25,11 +39,11 @@ export function ProgressBar({ currentStage }: { currentStage: string }) {
         <div style={{ 
           position: 'absolute', top: '50%', left: '0', height: '2px', 
           backgroundColor: 'var(--accent)', zIndex: 0, transform: 'translateY(-50%)',
-          width: `${(Math.min(currentIndex, STEPS.length - 2) / (STEPS.length - 2)) * 100}%`,
+          width: `${progressPercent}%`,
           transition: 'width 0.3s ease'
         }} />
 
-        {STEPS.slice(0, STEPS.length - 1).map((step, index) => {
+        {steps.slice(0, steps.length - 1).map((step, index) => {
           const isCompleted = index < currentIndex;
           const isActive = index === currentIndex;
           

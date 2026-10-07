@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiClient } from '../api/client';
 
 export interface SessionState {
   participantId: string | null;
   sessionId: string | null;
   condition: 'experimental' | 'control' | null;
   currentStage: string | null;
+  enabledStages: string[] | null;
 }
 
 const defaultState: SessionState = {
@@ -12,6 +14,7 @@ const defaultState: SessionState = {
   sessionId: null,
   condition: null,
   currentStage: null,
+  enabledStages: null,
 };
 
 const SessionContext = createContext<SessionState>(defaultState);
@@ -23,6 +26,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const setSession = (partial: Partial<SessionState>) => {
     setState((prev) => ({ ...prev, ...partial }));
   };
+
+  useEffect(() => {
+    apiClient.get('/protocol/active', { params: { _t: Date.now() } })
+      .then((res) => {
+        if (res.data?.enabled_stages) {
+          setState((prev) => ({
+            ...prev,
+            enabledStages: res.data.enabled_stages,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load active protocol in SessionProvider:', err);
+      });
+  }, []);
 
   return (
     <SessionContext.Provider value={state}>
