@@ -1,5 +1,5 @@
-import React from 'react';
-import { getExportUrl } from '../api/admin';
+import React, { useState } from 'react';
+import { downloadExport } from '../api/admin';
 
 interface ExportCardProps {
   title: string;
@@ -9,7 +9,20 @@ interface ExportCardProps {
 }
 
 function ExportCard({ title, description, exportType, badge }: ExportCardProps) {
-  const downloadUrl = getExportUrl(exportType);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    setError('');
+    try {
+      await downloadExport(exportType);
+    } catch (err: any) {
+      setError(err.message || 'Download failed');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="admin-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
@@ -21,12 +34,18 @@ function ExportCard({ title, description, exportType, badge }: ExportCardProps) 
         <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
           {description}
         </p>
+        {error && (
+          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--error, #dc2626)' }}>{error}</p>
+        )}
       </div>
 
-      <a
-        href={downloadUrl}
-        download
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={downloading}
         style={{
+          border: 'none',
+          cursor: downloading ? 'wait' : 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
           gap: '0.5rem',
@@ -40,8 +59,8 @@ function ExportCard({ title, description, exportType, badge }: ExportCardProps) 
           whiteSpace: 'nowrap'
         }}
       >
-        📥 Download CSV
-      </a>
+        {downloading ? 'Preparing…' : '📥 Download CSV'}
+      </button>
     </div>
   );
 }

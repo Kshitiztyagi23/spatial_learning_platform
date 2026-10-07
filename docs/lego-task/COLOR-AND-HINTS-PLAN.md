@@ -1,6 +1,6 @@
 # Plan 03 — Colour, a bigger brick catalogue, and hints that don't give it away
 
-Status: **decisions taken 2026-09-09** (see §9). Amends `00-SHARED-SPEC.md` §1,
+Status: **decisions taken 2026-09-09** (see §9). Amends [`SPEC.md`](./SPEC.md) §1,
 §3, §5, §5a and the `types.ts` contract in §6. Two open questions remain (§9,
 Q5–Q6) but neither blocks Phase 0.
 

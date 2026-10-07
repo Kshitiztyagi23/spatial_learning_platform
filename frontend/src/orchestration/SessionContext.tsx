@@ -17,11 +17,36 @@ const defaultState: SessionState = {
   enabledStages: null,
 };
 
+// Tab-scoped so a refresh resumes the session, while a new tab or browser on a
+// shared classroom machine starts a fresh participant.
+const STORAGE_KEY = 'study_session';
+
+function loadPersisted(): SessionState {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null');
+    if (saved?.sessionId) {
+      return { ...defaultState, participantId: saved.participantId, sessionId: saved.sessionId, condition: saved.condition };
+    }
+  } catch {
+    // Corrupt entry: fall through to a fresh session
+  }
+  return defaultState;
+}
+
 const SessionContext = createContext<SessionState>(defaultState);
 const SessionDispatchContext = createContext<((partial: Partial<SessionState>) => void) | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SessionState>(defaultState);
+  const [state, setState] = useState<SessionState>(loadPersisted);
+
+  useEffect(() => {
+    if (state.sessionId) {
+      const { participantId, sessionId, condition } = state;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ participantId, sessionId, condition }));
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }, [state.participantId, state.sessionId, state.condition]);
 
   const setSession = (partial: Partial<SessionState>) => {
     setState((prev) => ({ ...prev, ...partial }));

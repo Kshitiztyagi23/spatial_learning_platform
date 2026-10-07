@@ -1,23 +1,29 @@
 # Adaptive Spatial Learning Platform
 
-A comprehensive research platform for studying spatial reasoning in middle-school students (Grades 5 & 8). Participants complete a unified sequence of spatial tasks — demographic surveys, a digital psychometric perspective-taking test (PTSOT), and an interactive 3D LEGO construction workbench — with all trials, interactions, and submissions securely stored in Neon PostgreSQL via a FastAPI backend.
+A research platform for studying spatial reasoning in middle-school students (Grades 5–8). Participants complete one continuous sequence of tasks — intake surveys, a digital Perspective-Taking/Spatial Orientation Test (PTSOT), a contextual park perspective-taking test, and an interactive 3D LEGO construction workbench. Researchers configure the study and download data from a passcode-protected admin console. All trials, interactions, and submissions are stored in Neon PostgreSQL via a FastAPI backend.
 
 ---
 
-## Quick Start (No Reinstallation Needed)
+## Quick Start
 
-All virtual environments and dependencies are saved locally on disk. You do **not** need to install anything again.
+The backend virtual environment (`backend/venv`) and frontend `node_modules` are kept on disk, so no reinstall is needed.
 
 ### Option 1: 1-Click Launch (Recommended)
-Double-click:
-```
-start_all.bat
-```
-This automatically launches the FastAPI backend, the Vite frontend dev server, and opens your browser at `http://127.0.0.1:5173/`.
+Double-click `start_all.bat`. It starts the FastAPI backend and the Vite dev server, then opens `http://127.0.0.1:5173/`.
 
 ### Option 2: Individual Launchers
-- **Backend**: Double-click `start_backend.bat` (runs on `http://127.0.0.1:8000`)
-- **Frontend**: Double-click `start_frontend.bat` (runs on `http://127.0.0.1:5173`)
+- **Backend**: `start_backend.bat` (runs on `http://127.0.0.1:8000`)
+- **Frontend**: `start_frontend.bat` (runs on `http://127.0.0.1:5173`)
+
+### Configuration (`backend/.env`)
+Copy `backend/.env.example` to `backend/.env` and fill in:
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `CORS_ORIGINS` | Allowed frontend origins |
+| `ADMIN_PASSCODE` | Researcher passcode for `/admin`. Empty disables the admin API. |
+| `ADMIN_TOKEN_SECRET` | Optional. Fixed key so admin logins survive a backend restart. |
 
 ---
 
@@ -25,52 +31,80 @@ This automatically launches the FastAPI backend, the Vite frontend dev server, a
 
 ```
 spatial_learning_platform/
-├── backend/                 # FastAPI REST API + Async SQLAlchemy + Alembic
-│   ├── app/                 # Routers, Models (12 tables), Schemas, State Machine
-│   ├── alembic/             # Database migration versions
-│   ├── venv/                # Preserved Python virtual environment (all packages installed)
-│   ├── .env                 # Database connection string (Neon PostgreSQL)
-│   └── tests/               # Pytest suite
+├── backend/                     # FastAPI + async SQLAlchemy + Alembic
+│   ├── app/api/v1/              # participants, sessions, stages, trials, lego, admin
+│   ├── app/models/              # 13 tables incl. study_protocols
+│   ├── app/services/            # Stage orchestration & condition assignment
+│   ├── alembic/                 # Database migrations
+│   └── tests/                   # Pytest suite
 │
-├── frontend/                # React 19 + TypeScript + Vite Platform Shell
-│   ├── src/
-│   │   ├── tasks/intake/    # Consent, Demographics (Grades 5-8), Spatial Experience
-│   │   ├── tasks/ptsot/     # 12-question PTSOT perspective test with interactive dial
-│   │   ├── tasks/lego/      # Three.js / R3F 3D LEGO construction workbench
-│   │   ├── shell/           # Progress bar & layout
-│   │   └── orchestration/   # Session context & state management
-│   └── node_modules/        # Preserved npm dependencies
+├── frontend/                    # React 19 + TypeScript + Vite
+│   ├── src/tasks/intake/        # Consent, Demographics, Spatial Experience
+│   ├── src/tasks/ptsot/         # 12-question PTSOT with angle-picker dial
+│   ├── src/tasks/perspective/   # 8-scenario park perspective-taking test
+│   ├── src/tasks/lego/          # Three.js / R3F 3D LEGO workbench (21 puzzles)
+│   ├── src/admin/               # Researcher console (/admin)
+│   ├── src/orchestration/       # Session context & stage routing
+│   └── src/shell/               # Layout & progress bar
 │
-├── start_all.bat            # 1-click launcher for both servers + browser
-├── start_backend.bat        # Launcher for FastAPI backend
-├── start_frontend.bat       # Launcher for Vite frontend
-├── ptsot-task/              # Original reference standalone task
-└── lego-task/               # Original reference standalone task
+├── docs/
+│   ├── PROJECT_PLAN.md          # Full product & implementation plan
+│   └── lego-task/               # LEGO task spec and colour/hints design
+│
+├── TODO.md                      # Open work
+└── start_*.bat                  # Launchers
 ```
 
 ---
 
-## Research Workflow
+## Participant Workflow
 
-1. **Consent (`/`)**: Participant enters name and checks consent.
-2. **Demographics (`/demographics`)**: Grade (5–8), Section, Roll Number, Age (8–18), Gender.
-3. **Spatial Experience (`/experience`)**: 3 Likert questions regarding 3D games and building block habits.
-4. **PTSOT (`/ptsot`)**: Instructions, 2 practice items with feedback, 12 test questions with a 5-minute countdown timer and anti-cheat tab-switching detection. Trials are posted directly to PostgreSQL.
-5. **LEGO Workbench (`/lego`)**: Interactive 3D construction canvas with 3 orthographic views (Front, Right, Top), brick tray, translation-invariant validator, and final build submission.
-6. **Done (`/done`)**: Completion confirmation screen.
+The stage order is controlled by the active study protocol (see Admin Console). The default sequence is:
+
+1. **Consent (`/`)**: Participant enters name and gives consent.
+2. **Demographics (`/demographics`)**: Grade, section, roll number, age, gender.
+3. **Spatial Experience (`/experience`)**: Likert questions on 3D games and building-block habits.
+4. **PTSOT (`/ptsot`)**: Instructions, 2 practice items with feedback, then the configured test questions under a countdown timer, with tab-switch detection.
+5. **Spatial Perspective Taking (`/perspective`)**: Park scenes shown from several viewpoints; "where would X be?" direction questions.
+6. **LEGO Workbench (`/lego`)**: Rebuild a solid from its Front, Right, and Top views using a counted brick tray; only the puzzles selected in the protocol are offered. Every placement, removal, check, and rejected move is logged, and the submission is scored (accuracy = puzzles solved / offered, efficiency = solves / Check presses).
+7. **Done (`/done`)**: Completion screen.
+
+Demographics is always on, because that's where the participant and session are created. Refreshing the page resumes the session at the stage the server has on record. A new tab or browser starts a fresh participant.
+
+Each participant is randomly assigned to the `experimental` (AI feedback) or `control` condition, using the percentage set in the protocol.
 
 ---
 
-## Database & Data Persistence
+## Admin Console (`/admin`)
 
-- **Database**: Cloud Neon PostgreSQL.
-- **Tables**: `participants`, `sessions`, `stages`, `tasks`, `task_instances`, `trials`, `responses`, `lego_events`, `lego_submissions`, `feedback_events`, `adaptation_decisions`, `audit_logs`.
-- All student attempts and session histories remain permanently saved in the database even after restarting local machines.
+Protected by `ADMIN_PASSCODE`. Every admin API call requires a signed token, which expires after 8 hours.
+
+- **Protocol**: enable or disable stages, pick PTSOT questions, perspective scenarios and LEGO puzzles, set time limits and the AI-feedback percentage.
+- **Live Sessions**: every session with participant, condition, and current stage.
+- **Data Exports**: CSV downloads of participants, PTSOT trials, LEGO events, and LEGO submissions.
+
+---
+
+## Database
+
+- **Database**: Neon PostgreSQL (cloud).
+- **Tables**: `participants`, `sessions`, `stages`, `tasks`, `task_instances`, `trials`, `responses`, `lego_events`, `lego_submissions`, `feedback_events`, `adaptation_decisions`, `audit_logs`, `study_protocols`.
+- Apply migrations with `alembic upgrade head` from `backend/`.
+
+### Tests
+
+```
+cd backend
+venv\Scripts\python -m pytest
+```
+
+Rule and orchestration tests always run. API tests write real rows, so they are skipped unless `TEST_DATABASE_URL` points at a **separate** database (a free Neon branch works). Migrate that database once with `set DATABASE_URL=<test url>` then `alembic upgrade head`.
 
 ---
 
 ## Contributors
 
-- **Kshitiz Tyagi** — Platform architecture, research design
-- **Aditya Singh** — LEGO task engine (`lego-task/`)
-- **Naitik Lalchandani** — PTSOT task (`ptsot-task/`)
+- **Kshitiz Tyagi** — Platform architecture, research design, admin console
+- **Aditya Singh** — LEGO task engine
+- **Naitik Lalchandani** — PTSOT task
+- **Harshada Rajhans** — Spatial perspective-taking test

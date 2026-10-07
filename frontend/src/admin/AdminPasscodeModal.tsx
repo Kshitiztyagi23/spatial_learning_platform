@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { verifyPasscode } from '../api/admin';
+import { ADMIN_TOKEN_KEY } from '../api/client';
 import { Button } from '../shared/Button';
 
 interface Props {
@@ -19,7 +20,7 @@ export function AdminPasscodeModal({ onAuthenticated }: Props) {
     try {
       const res = await verifyPasscode(passcode);
       if (res.valid && res.token) {
-        sessionStorage.setItem('admin_token', res.token);
+        sessionStorage.setItem(ADMIN_TOKEN_KEY, res.token);
         onAuthenticated();
       } else {
         setError(res.message || 'Incorrect passcode');
