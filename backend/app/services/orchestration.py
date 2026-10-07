@@ -9,8 +9,10 @@ from app.models.protocol import (
     DEFAULT_PTSOT_CONFIG,
     DEFAULT_PERSPECTIVE_CONFIG,
     DEFAULT_LEGO_CONFIG,
-    normalize_stages
+    DEFAULT_CONDITION_SPLIT,
+    DEFAULT_TOTAL_ROUNDS,
 )
+from app.services.study_design import Schedule, normalize_schedule, order_stages
 
 STAGE_SEQUENCE = DEFAULT_STAGES
 
@@ -26,7 +28,9 @@ async def get_or_create_active_protocol(db: AsyncSession) -> StudyProtocol:
             enabled_stages_json=json.dumps(DEFAULT_STAGES),
             ptsot_config_json=json.dumps(DEFAULT_PTSOT_CONFIG),
             perspective_config_json=json.dumps(DEFAULT_PERSPECTIVE_CONFIG),
-            lego_config_json=json.dumps(DEFAULT_LEGO_CONFIG)
+            lego_config_json=json.dumps(DEFAULT_LEGO_CONFIG),
+            condition_split_json=json.dumps(DEFAULT_CONDITION_SPLIT),
+            total_rounds=DEFAULT_TOTAL_ROUNDS
         )
         db.add(protocol)
         await db.commit()
@@ -38,7 +42,7 @@ def get_session_stage_sequence(session: Session) -> list[str]:
         try:
             seq = json.loads(session.stage_sequence_json)
             if isinstance(seq, list) and len(seq) > 0:
-                return normalize_stages(seq)
+                return order_stages(seq)
         except Exception:
             pass
     return STAGE_SEQUENCE
@@ -69,10 +73,35 @@ def advance_session_stage(session: Session, completed_stage: str) -> str:
     session.current_stage = next_stage
     return next_stage
 
-def assign_condition(ai_feedback_percentage: int = 50) -> str:
-    # Ensure percentage is clamped between 0 and 100
-    pct = max(0, min(100, ai_feedback_percentage))
-    if random.uniform(0, 100) < pct:
-        return "experimental"
-    return "control"
 
+def protocol_condition_split(protocol: StudyProtocol) -> dict[str, int]:
+    try:
+        split = json.loads(protocol.condition_split_json or "")
+        if isinstance(split, dict):
+            return split
+    except ValueError:
+        pass
+    return dict(DEFAULT_CONDITION_SPLIT)
+
+
+def protocol_total_rounds(protocol: StudyProtocol) -> int:
+    return protocol.total_rounds or DEFAULT_TOTAL_ROUNDS
+
+
+def protocol_schedule(protocol: StudyProtocol) -> Schedule:
+    try:
+        raw = json.loads(protocol.round_schedule_json) if protocol.round_schedule_json else None
+    except ValueError:
+        raw = None
+    return normalize_schedule(raw, protocol_total_rounds(protocol))
+
+
+def session_feedback_stages(session: Session) -> set[str]:
+    """Stages that give hints in this session. Sessions from before the
+    schedule existed fall back to the old rule: experimental group only."""
+    if session.feedback_stages_json is not None:
+        try:
+            return set(json.loads(session.feedback_stages_json))
+        except ValueError:
+            return set()
+    return {"spatial_perspective_taking", "lego"} if session.condition == "experimental" else set()

@@ -8,6 +8,7 @@ from app.api.v1.stages import router as stages_router
 from app.api.v1.trials import router as trials_router
 from app.api.v1.lego import router as lego_router
 from app.api.v1.admin import router as admin_router
+from app.api.v1.feedback import router as feedback_router
 
 app = FastAPI(
     title="Adaptive Spatial Learning Platform API",
@@ -28,7 +29,8 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.orchestration import get_or_create_active_protocol
-from app.models.protocol import normalize_stages
+from app.services.orchestration import protocol_schedule
+from app.services.study_design import first_round_stages
 
 @app.get("/health")
 async def health_check():
@@ -37,12 +39,13 @@ async def health_check():
 @app.get("/api/v1/protocol/active")
 async def get_active_protocol_public(db: AsyncSession = Depends(get_db)):
     protocol = await get_or_create_active_protocol(db)
-    stages = normalize_stages(json.loads(protocol.enabled_stages_json))
+    stages = first_round_stages(protocol_schedule(protocol))
     first_stage = stages[0]
     return {
         "enabled_stages": stages,
         "first_stage": first_stage,
-        "ai_feedback_percentage": protocol.ai_feedback_percentage
+        "ai_feedback_percentage": protocol.ai_feedback_percentage,
+        "total_rounds": protocol.total_rounds
     }
 
 app.include_router(participants_router, prefix="/api/v1")
@@ -50,4 +53,5 @@ app.include_router(sessions_router, prefix="/api/v1")
 app.include_router(stages_router, prefix="/api/v1")
 app.include_router(trials_router, prefix="/api/v1")
 app.include_router(lego_router, prefix="/api/v1")
+app.include_router(feedback_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")

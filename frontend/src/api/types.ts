@@ -1,3 +1,5 @@
+export type Condition = 'experimental' | 'control' | 'natural_control' | 'unassigned'
+
 export interface ParticipantCreate {
   name: string
   age: number
@@ -11,8 +13,18 @@ export interface ParticipantCreate {
 export interface ParticipantOut {
   id: string
   external_id: string
-  condition: 'experimental' | 'control'
+  participant_code: string | null
+  condition: Condition
   created_at: string
+}
+
+export interface ParticipantLookupOut {
+  participant_id: string
+  first_name: string
+  status: 'ready' | 'waiting' | 'complete'
+  next_round: number | null
+  total_rounds: number
+  study_complete: boolean
 }
 
 export interface SessionCreate {
@@ -22,10 +34,17 @@ export interface SessionCreate {
 export interface SessionOut {
   id: string
   participant_id: string
-  condition: 'experimental' | 'control'
+  condition: Condition
   current_stage: string
   status: string
   started_at: string
+  round_number: number
+  total_rounds: number | null
+  round_type: 'pre' | 'training' | 'post' | null
+  participant_code: string | null
+  stages: string[]
+  feedback_stages: string[]
+  more_rounds: boolean
 }
 
 export interface NextStageOut {

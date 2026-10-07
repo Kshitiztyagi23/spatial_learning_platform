@@ -517,3 +517,21 @@
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
+
+/* Experimental-condition hint, pinned to the bottom of the board */
+.board-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  background-color: var(--sheet);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  padding: 10px 18px;
+  border-radius: 8px;
+  z-index: 20;
+  pointer-events: none;
+}

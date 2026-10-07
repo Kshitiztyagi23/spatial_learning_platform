@@ -16,3 +16,5 @@ class Session(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     stage_sequence_json: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Stages that give hints in this session, fixed when the session starts
+    feedback_stages_json: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
 import { completeStage, getNextStage } from '../../api/sessions';
 import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
+import { requestFeedback, acknowledgeFeedback } from '../../api/feedback';
 import { SCENARIOS } from './perspectiveData';
 import { DirectionOption } from './types';
 import './perspective.css';
@@ -23,6 +24,17 @@ export function PerspectiveTask() {
   const [questionIdx, setQuestionIdx] = useState(0);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, DirectionOption>>({});
+  // ms from a question first appearing to the participant's latest answer to it
+  const [reactionTimes, setReactionTimes] = useState<Record<string, number>>({});
+  const shownAt = useRef<Record<string, number>>({});
+
+  // Experimental condition: one hint per question after a wrong answer. The
+  // answer given before the hint is what gets recorded as the trial response.
+  const [hintsEnabled, setHintsEnabled] = useState(false);
+  const [hints, setHints] = useState<Record<string, string>>({});
+  const [firstAnswers, setFirstAnswers] = useState<Record<string, DirectionOption>>({});
+  const pendingFeedback = useRef<Record<string, string>>({});
+  const [checkingAnswer, setCheckingAnswer] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Lightbox / Pop-up Full Screen state
@@ -35,6 +47,7 @@ export function PerspectiveTask() {
     apiClient.get(`/sessions/${sessionId}/task-config/spatial_perspective_taking`)
       .then(res => {
         const cfg = res.data;
+        setHintsEnabled(cfg.ai_hints_enabled === true);
         if (cfg.selected_scenarios && Array.isArray(cfg.selected_scenarios)) {
           const filtered = SCENARIOS.filter(s => cfg.selected_scenarios.includes(s.id));
           if (filtered.length > 0) {
@@ -51,6 +64,12 @@ export function PerspectiveTask() {
   const currentQuestion = currentScenario.questions[questionIdx] || currentScenario.questions[0];
   const questionKey = `${currentScenario.id}_${currentQuestion.id}`;
   const selectedAnswer = answers[questionKey];
+
+  useEffect(() => {
+    if (phase === 'testing' && shownAt.current[questionKey] === undefined) {
+      shownAt.current[questionKey] = Date.now();
+    }
+  }, [phase, questionKey]);
 
   // Reset active image when scenario changes
   useEffect(() => {
@@ -89,22 +108,61 @@ export function PerspectiveTask() {
       ...prev,
       [questionKey]: option
     }));
+    const start = shownAt.current[questionKey];
+    if (start !== undefined) {
+      setReactionTimes(prev => ({ ...prev, [questionKey]: Date.now() - start }));
+    }
   };
 
   const handlePrev = () => {
     if (questionIdx > 0) {
       setQuestionIdx(prev => prev - 1);
     } else if (scenarioIdx > 0) {
-      const prevScenario = SCENARIOS[scenarioIdx - 1];
+      const prevScenario = scenarios[scenarioIdx - 1];
       setScenarioIdx(scenarioIdx - 1);
       setQuestionIdx(prevScenario.questions.length - 1);
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (hintsEnabled && selectedAnswer && !(questionKey in hints) && sessionId) {
+      const correct = selectedAnswer === currentQuestion.correctAnswer;
+      if (!correct) {
+        setCheckingAnswer(true);
+        try {
+          const res = await requestFeedback(sessionId, {
+            task_type: 'spatial_perspective_taking',
+            correct,
+            context: {
+              stimulus_id: `scenario_${currentScenario.id}_q_${currentQuestion.questionNumber}`,
+              answer: selectedAnswer,
+              question: currentQuestion.text,
+            },
+          });
+          if (res.shown && res.message) {
+            setHints(prev => ({ ...prev, [questionKey]: res.message! }));
+            setFirstAnswers(prev => ({ ...prev, [questionKey]: selectedAnswer }));
+            if (res.feedback_id) pendingFeedback.current[questionKey] = res.feedback_id;
+            return; // Stay on the question so the participant can rethink
+          }
+        } catch (err) {
+          console.warn('Hint request failed:', err);
+        } finally {
+          setCheckingAnswer(false);
+        }
+      }
+    }
+
+    const feedbackId = pendingFeedback.current[questionKey];
+    if (feedbackId && sessionId) {
+      delete pendingFeedback.current[questionKey];
+      acknowledgeFeedback(sessionId, feedbackId, selectedAnswer === currentQuestion.correctAnswer)
+        .catch(err => console.warn('Hint outcome not recorded:', err));
+    }
+
     if (questionIdx < currentScenario.questions.length - 1) {
       setQuestionIdx(prev => prev + 1);
-    } else if (scenarioIdx < SCENARIOS.length - 1) {
+    } else if (scenarioIdx < scenarios.length - 1) {
       setScenarioIdx(prev => prev + 1);
       setQuestionIdx(0);
     } else {
@@ -118,20 +176,22 @@ export function PerspectiveTask() {
 
     if (sessionId) {
       try {
-        // Record trial responses
-        for (const scenario of SCENARIOS) {
+        // Record trial responses, numbered in the order they were presented
+        let trialNumber = 0;
+        for (const scenario of scenarios) {
           for (const q of scenario.questions) {
+            trialNumber += 1;
             const key = `${scenario.id}_${q.id}`;
-            const userAns = answers[key];
+            const userAns = firstAnswers[key] ?? answers[key];
             if (userAns) {
               await apiClient.post(`/sessions/${sessionId}/trials`, {
-                task_instance_id: sessionId,
-                trial_number: q.id,
+                task_type: 'spatial_perspective_taking',
+                trial_number: trialNumber,
                 response_value: userAns,
                 correct_response: q.correctAnswer,
                 stimulus_id: `scenario_${scenario.id}_q_${q.questionNumber}`,
-                reaction_time_ms: 1000
-              }).catch(() => {});
+                reaction_time_ms: reactionTimes[key] ?? null
+              }).catch(err => console.warn('Perspective trial not recorded:', err));
             }
           }
         }
@@ -256,14 +316,16 @@ export function PerspectiveTask() {
 
           {/* Action Row */}
           <div className="instructions-footer">
-            <button
-              type="button"
-              className="btn-skip"
-              onClick={handleDevSkip}
-              title="Fast-forward straight to LEGO workbench"
-            >
-              ⚡ Dev: Skip to LEGO
-            </button>
+            {import.meta.env.DEV && (
+              <button
+                type="button"
+                className="btn-skip"
+                onClick={handleDevSkip}
+                title="Fast-forward straight to LEGO workbench"
+              >
+                ⚡ Dev: Skip to LEGO
+              </button>
+            )}
 
             <button
               type="button"
@@ -292,19 +354,21 @@ export function PerspectiveTask() {
 
         <div className="perspective-meta">
           <div className="scenario-badge">
-            Scenario {scenarioIdx + 1} of {SCENARIOS.length}
+            Scenario {scenarioIdx + 1} of {scenarios.length}
           </div>
           <div className="question-counter-badge">
             Question {questionIdx + 1} of {currentScenario.questions.length}
           </div>
-          <button 
-            type="button" 
-            className="btn-skip"
-            onClick={handleDevSkip}
-            title="Fast-forward straight to LEGO workbench"
-          >
-            ⚡ Dev: Skip to LEGO
-          </button>
+          {import.meta.env.DEV && (
+            <button
+              type="button"
+              className="btn-skip"
+              onClick={handleDevSkip}
+              title="Fast-forward straight to LEGO workbench"
+            >
+              ⚡ Dev: Skip to LEGO
+            </button>
+          )}
         </div>
       </div>
 
@@ -317,7 +381,7 @@ export function PerspectiveTask() {
               <h3>Reference Views</h3>
               <span className="carousel-hint">Click the image or any thumbnail to pop up full-screen</span>
             </div>
-            <button 
+            <button
               type="button"
               className="enlarge-btn"
               onClick={() => openLightbox(activeImageIdx)}
@@ -417,6 +481,12 @@ export function PerspectiveTask() {
             })}
           </div>
 
+          {hints[questionKey] && (
+            <div className="perspective-hint" role="status" aria-live="polite">
+              {hints[questionKey]} You can change your answer, then press Next.
+            </div>
+          )}
+
           {/* Question Quick Jump Pills */}
           <div>
             <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.4rem' }}>
@@ -457,7 +527,7 @@ export function PerspectiveTask() {
                 type="button"
                 className="btn-primary"
                 onClick={handleNext}
-                disabled={isSubmitting}
+                disabled={isSubmitting || checkingAnswer}
               >
                 {isLastQuestionOfTest ? (
                   isSubmitting ? 'Submitting...' : 'Finish & Continue to LEGO ✓'
@@ -486,8 +556,8 @@ export function PerspectiveTask() {
                 <span className="lightbox-view-title">{currentScenario.images[lightboxImgIdx]?.label}</span>
                 <span className="lightbox-view-sub">({currentScenario.images[lightboxImgIdx]?.description})</span>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="lightbox-close-btn" 
                 onClick={closeLightbox}
                 aria-label="Close"

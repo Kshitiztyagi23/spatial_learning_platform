@@ -90,14 +90,21 @@ export function DataExportsTab() {
       />
 
       <ExportCard
-        title="3. 3D LEGO Interaction Logs"
+        title="3. Spatial Perspective Taking Trials"
+        description="Per-question answers for the park scenarios: chosen direction, correct direction, correctness flag, and reaction time (ms)."
+        exportType="perspective_trials"
+        badge="Scenarios"
+      />
+
+      <ExportCard
+        title="4. 3D LEGO Interaction Logs"
         description="Comprehensive real-time telemetry: every block placement, removal, rotation, coordinates, and timestamp."
         exportType="lego_events"
         badge="3D Telemetry"
       />
 
       <ExportCard
-        title="4. LEGO Final Submissions"
+        title="5. LEGO Final Submissions"
         description="Final build evaluations: duration in seconds, shape accuracy, and efficiency metrics."
         exportType="lego_submissions"
         badge="Summary Scores"

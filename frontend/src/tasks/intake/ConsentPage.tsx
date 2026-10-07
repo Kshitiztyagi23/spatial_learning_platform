@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/Button';
 import { useSessionDispatch } from '../../orchestration/SessionContext';
 import { apiClient } from '../../api/client';
@@ -97,6 +97,9 @@ export function ConsentPage() {
           </Button>
         </div>
       </form>
+      <p style={{ marginTop: '1.5rem', color: 'var(--muted)', fontSize: '0.9rem' }}>
+        Been here before? <Link to="/return">Continue with your code</Link>
+      </p>
     </div>
   );
 }

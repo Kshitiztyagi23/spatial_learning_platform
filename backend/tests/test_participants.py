@@ -16,7 +16,8 @@ async def test_create_participant():
         })
     assert response.status_code == 200
     data = response.json()
-    assert data["condition"] in ["experimental", "control"]
+    assert data["condition"] == "unassigned"  # groups are assigned after session 1
+    assert len(data["participant_code"]) == 6
     assert len(data["external_id"]) == 8
 
 @pytest.mark.asyncio

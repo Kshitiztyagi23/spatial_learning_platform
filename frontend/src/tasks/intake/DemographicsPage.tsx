@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -67,10 +67,10 @@ export function DemographicsPage() {
         consent: true
       });
       
-      setSession({ participantId: participant.id, condition: participant.condition });
+      setSession({ participantId: participant.id, condition: participant.condition, participantCode: participant.participant_code });
 
       const session = await createSession({ participant_id: participant.id });
-      setSession({ sessionId: session.id, currentStage: session.current_stage });
+      setSession({ sessionId: session.id, currentStage: session.current_stage, enabledStages: session.stages });
 
       // Record consent stage completion ONLY if consent is part of the session sequence
       if (session.current_stage === 'intake_consent') {
@@ -99,7 +99,10 @@ export function DemographicsPage() {
 
   return (
     <div className="card">
-      <h2 style={{ marginBottom: '1.5rem' }}>Participant Details</h2>
+      <h2 style={{ marginBottom: '0.5rem' }}>Participant Details</h2>
+      <p style={{ marginBottom: '1.5rem', color: 'var(--muted)', fontSize: '0.9rem' }}>
+        Been here before? <Link to="/return">Continue with your code</Link>
+      </p>
       {apiError && <div style={{ color: 'var(--error)', marginBottom: '1rem' }}>{apiError}</div>}
       
       <form onSubmit={handleSubmit(onSubmit)}>

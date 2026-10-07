@@ -24,6 +24,10 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `CORS_ORIGINS` | Allowed frontend origins |
 | `ADMIN_PASSCODE` | Researcher passcode for `/admin`. Empty disables the admin API. |
 | `ADMIN_TOKEN_SECRET` | Optional. Fixed key so admin logins survive a backend restart. |
+| `AI_PROVIDER` | Optional. `anthropic` (Claude) or `openai` (any OpenAI-compatible API: OpenAI, Gemini, Groq, OpenRouter, a local Ollama...). |
+| `AI_API_KEY` | Optional. Key for that provider. Without a configured provider, hints use the fixed rule text. |
+| `AI_MODEL` | Optional. Model name (Claude default: `claude-opus-5-5`; required for `openai`). |
+| `AI_BASE_URL` | Optional, `openai` only. The service's API URL; examples in `backend/.env.example`. |
 
 ---
 
@@ -34,12 +38,12 @@ spatial_learning_platform/
 ├── backend/                     # FastAPI + async SQLAlchemy + Alembic
 │   ├── app/api/v1/              # participants, sessions, stages, trials, lego, admin
 │   ├── app/models/              # 13 tables incl. study_protocols
-│   ├── app/services/            # Stage orchestration & condition assignment
+│   ├── app/services/            # Study design, rounds, scoring, feedback rules, AI phrasing
 │   ├── alembic/                 # Database migrations
 │   └── tests/                   # Pytest suite
 │
 ├── frontend/                    # React 19 + TypeScript + Vite
-│   ├── src/tasks/intake/        # Consent, Demographics, Spatial Experience
+│   ├── src/tasks/intake/        # Consent, Demographics, Spatial Experience, returning-student code entry
 │   ├── src/tasks/ptsot/         # 12-question PTSOT with angle-picker dial
 │   ├── src/tasks/perspective/   # 8-scenario park perspective-taking test
 │   ├── src/tasks/lego/          # Three.js / R3F 3D LEGO workbench (21 puzzles)
@@ -57,21 +61,54 @@ spatial_learning_platform/
 
 ---
 
-## Participant Workflow
+## Study Design
 
-The stage order is controlled by the active study protocol (see Admin Console). The default sequence is:
+The study compares how much students' spatial thinking improves across three groups:
+
+| Group | Recommended use |
+|---|---|
+| **AI feedback** (`experimental`) | Training tasks (park perspective test and LEGO) with AI hints |
+| **Tasks, no feedback** (`control`) | The same training tasks, no hints |
+| **Tests only** (`natural_control`) | Only the standard tests; no training tasks |
+
+**How a study runs:**
+
+1. **Session 1, every student:** intake and the PTSOT pre-test. No groups exist yet and nobody gets hints. Each student gets a 6-character code (e.g. `K7Q2XM`) at the end.
+2. **Assign groups (researcher):** in the admin console, press **Assign groups now**. Everyone who finished session 1 is split into the three groups in exactly the saved percentages. A student's group is permanent, and the assignment is recorded in the audit log.
+3. **Sessions 2 onward:** students choose "Continue with your code", confirm their first name, and do their group's plan for that session, with or without hints. Students who return before being assigned are told their session isn't ready yet. The final session is the post-test.
+
+**What each session contains is set in the admin console's session schedule:** one row for session 1 (shared by everyone), then for each group, which stages run in each later session and which tasks give hints. It starts from this recommended design:
+
+| | Session 1 (pre-test) | Middle sessions | Final session (post-test) |
+|---|---|---|---|
+| Everyone | intake → PTSOT | | |
+| AI feedback | | park → LEGO, with hints | PTSOT |
+| Tasks, no feedback | | park → LEGO, no hints | PTSOT |
+| Tests only | | (skipped) | PTSOT |
+
+A later session with nothing ticked is skipped by that group. Each session's stages and hint settings are fixed when it starts, so editing the schedule only affects sessions that start afterwards. Exports label every row, including the session-1 pre-test, with the student's assigned group. The rules live in `backend/app/services/study_design.py`, which also explains how to add a new stage such as the window test.
+
+### Stages
 
 1. **Consent (`/`)**: Participant enters name and gives consent.
-2. **Demographics (`/demographics`)**: Grade, section, roll number, age, gender.
+2. **Demographics (`/demographics`)**: Grade, section, roll number, age, gender. Always on in round 1, because that's where the participant and session are created.
 3. **Spatial Experience (`/experience`)**: Likert questions on 3D games and building-block habits.
-4. **PTSOT (`/ptsot`)**: Instructions, 2 practice items with feedback, then the configured test questions under a countdown timer, with tab-switch detection.
+4. **PTSOT (`/ptsot`)**: Instructions, 2 practice items with feedback, then the configured test questions under a countdown timer, with tab-switch detection. No hints for any group: it's the measure.
 5. **Spatial Perspective Taking (`/perspective`)**: Park scenes shown from several viewpoints; "where would X be?" direction questions.
-6. **LEGO Workbench (`/lego`)**: Rebuild a solid from its Front, Right, and Top views using a counted brick tray; only the puzzles selected in the protocol are offered. Every placement, removal, check, and rejected move is logged, and the submission is scored (accuracy = puzzles solved / offered, efficiency = solves / Check presses).
-7. **Done (`/done`)**: Completion screen.
+6. **LEGO Workbench (`/lego`)**: Rebuild a solid from its Front, Right, and Top views using a counted brick tray; only the puzzles selected in the protocol are offered, within the protocol's time limit. Every placement, removal, check, and rejected move is logged, and the submission is scored (accuracy = puzzles solved / offered, efficiency = solves / Check presses).
+7. **Done (`/done`)**: Completion screen, showing the student's code when more sessions follow.
 
-Demographics is always on, because that's where the participant and session are created. Refreshing the page resumes the session at the stage the server has on record. A new tab or browser starts a fresh participant.
+Refreshing the page resumes the session at the stage the server has on record. A new tab or browser starts a fresh participant.
 
-Each participant is randomly assigned to the `experimental` (AI feedback) or `control` condition, using the percentage set in the protocol.
+### Feedback (where the schedule turns hints on)
+
+**Rules decide what to say, an AI model decides how to say it.** The rule engine (`backend/app/services/feedback_rules.py`) works out what the student got wrong and picks a fixed hint. The AI model (`backend/app/services/ai_feedback.py`) rewrites that hint as one short, child-friendly sentence for the exact situation, e.g. naming the objects in the park question. Any provider works: Claude, or any OpenAI-compatible API (see the `AI_*` settings). The fixed hint is shown instead whenever no provider is configured, the call takes over 6 seconds, the model declines or errors, or its sentence breaks the writing rules (over 14 words, exclamation marks, praise). The model only receives task context: never names, demographics, or the correct answer.
+
+Every hint is logged to `feedback_events` with the rule version, whether AI or the rule wrote it (`generated_by`), the original rule text, and whether the student then fixed the error.
+
+- **LEGO:** every student sees which views match after Check. Experimental students also get a hint after each failed Check, getting more specific each time: what kind of error it is (e.g. "Look at the side view. Count the layers."), then where to look. Hints never name a brick. A 3-second cooldown stops repeated Checks from flooding hints.
+- **Perspective:** after a wrong answer, one hint ("Imagine standing where the character is, facing the same way.") and a chance to change the answer. The answer given before the hint is what's recorded as the trial response. Whether the student then corrected it is stored on the feedback event.
+- Hints are switched off for control participants, and LEGO hints can also be switched off in the protocol.
 
 ---
 
@@ -79,9 +116,9 @@ Each participant is randomly assigned to the `experimental` (AI feedback) or `co
 
 Protected by `ADMIN_PASSCODE`. Every admin API call requires a signed token, which expires after 8 hours.
 
-- **Protocol**: enable or disable stages, pick PTSOT questions, perspective scenarios and LEGO puzzles, set time limits and the AI-feedback percentage.
-- **Live Sessions**: every session with participant, condition, and current stage.
-- **Data Exports**: CSV downloads of participants, PTSOT trials, LEGO events, and LEGO submissions.
+- **Protocol**: set the group percentages and number of sessions; **assign groups** after session 1; edit the session schedule (what everyone does in session 1, and what each group does in each later session, with or without hints); see which AI provider is active; pick PTSOT questions, perspective scenarios and LEGO puzzles; set time limits.
+- **Live Sessions**: every session with the student's code, group, session number, and current stage.
+- **Data Exports**: CSV downloads of participants, PTSOT trials, perspective trials, LEGO events, LEGO submissions, and feedback events. Every activity row includes `participant_id`, `condition` and `round_number`, ready for pre/post comparisons by group.
 
 ---
 
@@ -98,7 +135,7 @@ cd backend
 venv\Scripts\python -m pytest
 ```
 
-Rule and orchestration tests always run. API tests write real rows, so they are skipped unless `TEST_DATABASE_URL` points at a **separate** database (a free Neon branch works). Migrate that database once with `set DATABASE_URL=<test url>` then `alembic upgrade head`.
+Tests run on a throwaway in-memory SQLite database by default, including an end-to-end run of a full participant session and every export, so they never touch the study database. To check Postgres-specific behaviour, set `TEST_DATABASE_URL` to a **separate** database (a free Neon branch works), migrated once with `set DATABASE_URL=<test url>` then `alembic upgrade head`.
 
 ---
 

@@ -33,3 +33,54 @@ def test_lego_scoring():
 
 def test_lego_scoring_nothing_to_score():
     assert score_lego_results([], puzzle_count=0) == (None, None)
+
+
+def test_angular_error_wraps_around():
+    from app.services.scoring import angular_error
+    assert angular_error("350", "10") == 20
+    assert angular_error("90", "270") == 180
+    assert angular_error("abc", "10") is None
+
+
+def test_trial_scoring_per_task():
+    from app.services.scoring import score_trial
+    assert score_trial("ptsot", "5", "350") is True    # 15 deg apart across 0
+    assert score_trial("ptsot", "5", "340") is False   # 25 deg is outside 22.5
+    assert score_trial("spatial_perspective_taking", "left", "Left") is True
+    assert score_trial("spatial_perspective_taking", "Right", "Left") is False
+    assert score_trial("ptsot", "90", None) is None
+
+
+def test_legacy_perspective_rows_recognised():
+    from app.services.scoring import classify_trial_task
+    assert classify_trial_task("ptsot", "Left") == "spatial_perspective_taking"
+    assert classify_trial_task("ptsot", "123") == "ptsot"
+
+
+def test_lego_hint_ladder_goes_coarse_to_fine():
+    from app.services.feedback_rules import lego_feedback
+    diagnoses = [
+        {"code": "brick-count-low"},
+        {"code": "height-wrong"},
+        {"code": "region-mismatch", "view": "right", "area": "left"},
+    ]
+    assert lego_feedback(1, diagnoses).message == "Some bricks are still in the tray."
+    assert lego_feedback(2, diagnoses).message == "Look at the side view. Count the layers."
+    assert lego_feedback(3, diagnoses).message == "In the side view, look at the left side."
+    # Stays on the finest hint after the ladder runs out
+    assert lego_feedback(7, diagnoses).trigger_reason.endswith("rung3")
+    assert lego_feedback(0, diagnoses) is None
+    assert lego_feedback(1, []) is None
+
+
+def test_hint_wording_follows_spec():
+    from app.services.feedback_rules import LEGO_DIAGNOSIS_MESSAGES, PERSPECTIVE_WRONG_MESSAGE
+    for message in [*LEGO_DIAGNOSIS_MESSAGES.values(), PERSPECTIVE_WRONG_MESSAGE]:
+        assert len(message.split()) < 12
+        assert "!" not in message
+
+
+def test_perspective_hint_only_when_wrong():
+    from app.services.feedback_rules import perspective_feedback
+    assert perspective_feedback(True) is None
+    assert perspective_feedback(False).feedback_type == "directional"

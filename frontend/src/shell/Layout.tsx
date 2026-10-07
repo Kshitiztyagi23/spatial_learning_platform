@@ -11,6 +11,7 @@ const ROUTE_STAGE_MAP: Record<string, string> = {
   '/perspective': 'spatial_perspective_taking',
   '/lego': 'lego',
   '/done': 'done',
+  '/return': 'returning',
 };
 
 export function Layout({ children }: { children: React.ReactNode }) {

@@ -16,3 +16,5 @@ class FeedbackEvent(Base):
     shown_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     accepted: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     rule_version: Mapped[str] = mapped_column(String, default="v1")
+    # "ai" when the model phrased the hint, "rule" for the fixed fallback text
+    generated_by: Mapped[str | None] = mapped_column(String, nullable=True)

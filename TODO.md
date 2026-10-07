@@ -6,27 +6,46 @@ parking lot for things that come up mid-conversation and shouldn't get lost.
 
 ## Next up
 
-- **Window / mental-rotation task.** In the plan's baseline assessment and
-  stage sequence (`WINDOW_TEST_TASK`), not started. Needs stimuli and a
-  decision on the response format.
-- **Real-time feedback engine.** Rule-based, condition-aware hints (plan §6):
-  WebSocket channel, cooldowns, writes to `feedback_events`. The LEGO
-  diagnosis engine (`frontend/src/tasks/lego/core/diagnose.ts`) already
-  produces hint material but isn't shown. Today experimental and control
-  participants see the same thing.
-- **Third condition.** The plan has experimental / control task / no
-  intervention; the platform assigns only two.
-- **Session feedback stage and multi-round sessions.** No `SESSION_FEEDBACK`
-  stage; `round_number` is always 1; no per-session/per-participant exports.
-- **LEGO protocol settings not yet enforced.** `time_limit_seconds` and
-  `ai_hints_enabled` are saved but the LEGO task ignores them.
+- **Window / mental-rotation test** (in progress, Kshitiz). To plug it in:
+  add the stage to `DEFAULT_STAGES` (`backend/app/models/protocol.py`),
+  `STAGE_ROUTES` (`frontend/src/orchestration/stages.ts`) and
+  `SCHEDULE_STAGES` (`frontend/src/admin/ScheduleEditor.tsx`); add it to
+  `TEST_STAGES` in `backend/app/services/study_design.py` so the recommended
+  design uses it; record answers through `POST /sessions/{id}/trials` with a
+  new `task_type` and scoring rule in `backend/app/services/scoring.py`.
+- **Session feedback stage.** The plan's `SESSION_FEEDBACK` step at the end of
+  each session isn't built.
+- **Rate-limit the code lookup.** `POST /participants/lookup` returns a first
+  name for a valid code. Codes are 6 characters from 32 symbols (~1 billion),
+  but the endpoint should still be rate-limited before going online.
+- **Assent in later rounds.** Returning students skip the consent page. Check
+  with the ethics protocol whether each session needs a fresh assent.
+- **LEGO hint ladder, later rungs.** Rungs 2–3 (error type, then where to look)
+  are built as text. Not yet: the soft region overlay on the view card, and
+  rung 5's opt-in "Show me" that reveals one cell
+  (`docs/lego-task/COLOR-AND-HINTS-PLAN.md` §4).
 - **Server-side LEGO validation.** Puzzle results are computed in the browser
   with the tested `check()` and scored on the server; the server doesn't
   re-validate builds against the puzzle solutions.
-- **Deployment.** See the hosting discussion; the plan's AWS setup is optional.
+- **LEGO timer survives refresh.** The time limit restarts if the page is
+  refreshed mid-task.
+- **Bundle size.** The production JS is ~1.5 MB (~420 KB gzipped), mostly
+  Three.js. Lazy-loading the LEGO task would speed up the first page on slow
+  school networks.
+- **Deployment.** The plan's AWS setup is optional; see the hosting notes.
 
 ## Content and decisions
 
+- **Clear test data before the real study.** The database holds ~29
+  participants from development and testing, already in groups from the old
+  random assignment. They'd appear in exports and group counts.
+- **Hint wording review.** Fixed hints are in
+  `backend/app/services/feedback_rules.py` and the AI instructions in
+  `backend/app/services/ai_feedback.py`; the research team should approve
+  both. Bump `RULE_VERSION` on any change.
+- **AI provider and cost.** Pick a provider and model (`AI_*` in
+  `backend/.env`), then measure hint latency and cost on a pilot. The admin
+  console shows which provider is active.
 - **Final perspective-taking artwork.** Scenario images under
   `frontend/public/perspective/templates/` are placeholders.
 - **Brick-count sub-tiers for the colour bands (B/C/D).** One puzzle each,
@@ -40,6 +59,9 @@ parking lot for things that come up mid-conversation and shouldn't get lost.
 
 - **Difficulty adaptation** (plan §6: ≥85% up, ≤70% down). Dropped for now
   (2026-10-07); the `adaptation_decisions` table stays unused until revisited.
+- **WebSocket feedback channel.** Feedback is request/response over HTTP
+  (the plan's own example event response carries the feedback inline). A
+  WebSocket is only needed if the server must push messages unprompted.
 
 ## Tooling
 
