@@ -28,7 +28,12 @@ export function ResumeGate({ children }: { children: React.ReactNode }) {
           if (location.pathname !== '/done') navigate('/', { replace: true });
           return;
         }
-        setSession({ currentStage: session.current_stage, condition: session.condition as 'experimental' | 'control' });
+        setSession({
+          currentStage: session.current_stage,
+          condition: session.condition,
+          participantCode: session.participant_code,
+          enabledStages: session.stages,
+        });
         const route = STAGE_ROUTES[session.current_stage as Stage];
         if (route && route !== location.pathname) navigate(route, { replace: true });
       })

@@ -18,6 +18,13 @@ import { completeStage, getNextStage } from '../../api/sessions';
 import { STAGE_ROUTES, type Stage as StudyStage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
 import { startLegoTelemetry } from './telemetry';
+import { useLegoHints } from './hints';
+
+function formatClock(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
 export function LegoTask() {
   const navigate = useNavigate();
@@ -26,6 +33,10 @@ export function LegoTask() {
   const [isFinishing, setIsFinishing] = useState(false);
   const startedAt = useRef(Date.now());
   const telemetry = useRef<ReturnType<typeof startLegoTelemetry> | null>(null);
+  const [hintsEnabled, setHintsEnabled] = useState(false);
+  const [timeLimit, setTimeLimit] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const hint = useLegoHints(sessionId, hintsEnabled);
 
   // Restrict the puzzle set to what the active study protocol selects, then
   // start logging build actions (logging failures never interrupt the child)
@@ -38,8 +49,12 @@ export function LegoTask() {
     };
     apiClient.get(`/sessions/${sessionId}/task-config/lego`)
       .then(res => {
+        if (cancelled) return;
         const ids = res.data?.selected_puzzles;
-        if (!cancelled && Array.isArray(ids)) useSession.getState().setPuzzleFilter(ids);
+        if (Array.isArray(ids)) useSession.getState().setPuzzleFilter(ids);
+        setHintsEnabled(res.data?.ai_hints_enabled === true);
+        const limit = res.data?.time_limit_seconds;
+        if (typeof limit === 'number' && limit > 0) setTimeLimit(limit);
       })
       .catch(err => {
         console.warn('Using full LEGO puzzle set:', err);
@@ -131,6 +146,25 @@ export function LegoTask() {
     }
   };
 
+  // Protocol time limit: count down from when the limit arrives, then finish
+  const finishRef = useRef(handleFinishLegoTask);
+  finishRef.current = handleFinishLegoTask;
+  useEffect(() => {
+    if (timeLimit === null) return;
+    const deadline = startedAt.current + timeLimit * 1000;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setTimeLeft(left);
+      if (left === 0) {
+        clearInterval(timer);
+        finishRef.current();
+      }
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(timer);
+  }, [timeLimit]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
       {/* Top Controls Bar */}
@@ -141,6 +175,15 @@ export function LegoTask() {
             Build the 3D shape that matches all 3 orthographic views.
           </span>
         </div>
+        {timeLeft !== null && (
+          <span
+            role="timer"
+            aria-label="Time left"
+            style={{ marginLeft: 'auto', marginRight: '1rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: timeLeft <= 60 ? 'var(--miss)' : 'var(--muted)' }}
+          >
+            Time left {formatClock(timeLeft)}
+          </span>
+        )}
         <Button variant="primary" onClick={handleFinishLegoTask} loading={isFinishing}>
           Finish LEGO Activity ✓
         </Button>
@@ -159,6 +202,7 @@ export function LegoTask() {
           <section className="app-board-region" aria-label="3D board stage">
             <Stage />
             <Feedback />
+            {hint && <div className="board-hint" role="status" aria-live="polite">{hint}</div>}
           </section>
           <aside className="app-views-region" aria-label="Orthographic views">
             <ViewsRow />

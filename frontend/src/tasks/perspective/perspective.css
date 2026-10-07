@@ -817,3 +817,14 @@
   border-color: #2563eb;
   color: #ffffff;
 }
+
+/* Experimental-condition hint after a wrong answer */
+.perspective-hint {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border: 2px solid #1e293b;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  font-weight: 600;
+}

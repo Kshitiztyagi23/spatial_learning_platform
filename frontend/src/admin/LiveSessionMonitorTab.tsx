@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { listSessions, SessionsResponse } from '../api/admin';
 import { Button } from '../shared/Button';
 
+export const CONDITION_LABELS: Record<string, string> = {
+  experimental: '🤖 AI feedback',
+  control: 'Tasks, no feedback',
+  natural_control: 'Tests only',
+  unassigned: 'No group yet',
+};
+
 export function LiveSessionMonitorTab() {
   const [data, setData] = useState<SessionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +40,8 @@ export function LiveSessionMonitorTab() {
     const matchesSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.roll_no.toLowerCase().includes(search.toLowerCase()) ||
-      s.external_id.toLowerCase().includes(search.toLowerCase());
+      s.external_id.toLowerCase().includes(search.toLowerCase()) ||
+      (s.participant_code ?? '').toLowerCase().includes(search.toLowerCase());
 
     const matchesGrade = gradeFilter === 'All' || s.grade === gradeFilter;
     const matchesCondition = conditionFilter === 'All' || s.condition === conditionFilter;
@@ -62,15 +70,27 @@ export function LiveSessionMonitorTab() {
           </div>
         </div>
         <div className="admin-stat-card">
-          <div className="admin-stat-title">Experimental (AI Hints)</div>
+          <div className="admin-stat-title">AI Feedback Group</div>
           <div className="admin-stat-value" style={{ color: '#3b82f6' }}>
             {data?.summary.experimental_count ?? 0}
           </div>
         </div>
         <div className="admin-stat-card">
-          <div className="admin-stat-title">Control Group</div>
+          <div className="admin-stat-title">Tasks, No Feedback</div>
           <div className="admin-stat-value" style={{ color: '#64748b' }}>
             {data?.summary.control_count ?? 0}
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-title">Tests Only (Natural Control)</div>
+          <div className="admin-stat-value" style={{ color: '#a16207' }}>
+            {data?.summary.natural_control_count ?? 0}
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-title">No Group Yet</div>
+          <div className="admin-stat-value" style={{ color: '#94a3b8' }}>
+            {data?.summary.unassigned_count ?? 0}
           </div>
         </div>
       </div>
@@ -81,7 +101,7 @@ export function LiveSessionMonitorTab() {
           <div style={{ display: 'flex', gap: '1rem', flex: 1, minWidth: '280px' }}>
             <input
               type="text"
-              placeholder="Search by student name, roll no, or ID..."
+              placeholder="Search by name, roll no, ID or code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ flex: 1, padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
@@ -103,8 +123,10 @@ export function LiveSessionMonitorTab() {
               style={{ padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
             >
               <option value="All">All Conditions</option>
-              <option value="experimental">Experimental (AI)</option>
-              <option value="control">Control</option>
+              <option value="experimental">{CONDITION_LABELS.experimental}</option>
+              <option value="control">{CONDITION_LABELS.control}</option>
+              <option value="natural_control">{CONDITION_LABELS.natural_control}</option>
+              <option value="unassigned">{CONDITION_LABELS.unassigned}</option>
             </select>
           </div>
 
@@ -118,11 +140,12 @@ export function LiveSessionMonitorTab() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>Code</th>
                 <th>Name</th>
                 <th>Grade / Section</th>
                 <th>Roll No</th>
-                <th>Assigned Condition</th>
+                <th>Group</th>
+                <th>Session</th>
                 <th>Current Stage</th>
                 <th>Status</th>
                 <th>Started At</th>
@@ -131,22 +154,23 @@ export function LiveSessionMonitorTab() {
             <tbody>
               {filteredSessions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
                     {loading ? 'Loading sessions...' : 'No participant sessions found matching the filters.'}
                   </td>
                 </tr>
               ) : (
                 filteredSessions.map((s) => (
                   <tr key={s.session_id}>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{s.external_id}</td>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600 }} title={`ID ${s.external_id}`}>{s.participant_code ?? s.external_id}</td>
                     <td style={{ fontWeight: 500 }}>{s.name}</td>
                     <td>{s.grade} - {s.section}</td>
                     <td>{s.roll_no}</td>
                     <td>
                       <span className={`condition-pill ${s.condition}`}>
-                        {s.condition === 'experimental' ? '🤖 Experimental' : 'Standard Control'}
+                        {CONDITION_LABELS[s.condition] ?? s.condition}
                       </span>
                     </td>
+                    <td>{s.round_number}</td>
                     <td>
                       <span className={`stage-pill ${s.current_stage === 'done' ? 'done' : ''}`}>
                         {s.current_stage}

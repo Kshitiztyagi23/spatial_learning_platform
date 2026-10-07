@@ -9,6 +9,8 @@ class Participant(Base):
     
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     external_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    # Short code the student uses to come back for later rounds
+    participant_code: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     age: Mapped[int] = mapped_column(Integer, nullable=False)
     gender: Mapped[str] = mapped_column(String, nullable=False)

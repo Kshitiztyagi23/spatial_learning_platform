@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { Condition } from './types';
 
 export interface PtsotConfig {
   selected_questions: number[];
@@ -16,11 +17,46 @@ export interface LegoConfig {
   ai_hints_enabled: boolean;
 }
 
+export interface ConditionSplit {
+  experimental: number;
+  control: number;
+  natural_control: number;
+}
+
+export interface RoundPlan {
+  stages: string[];
+  feedback: string[];
+}
+
+export interface RoundSchedule {
+  /** Every student, before groups exist (no hints) */
+  session_1: RoundPlan;
+  /** group -> one plan per session 2..N */
+  groups: Record<keyof ConditionSplit, RoundPlan[]>;
+}
+
+export interface AssignmentStatus {
+  /** Finished session 1, not in a group yet */
+  waiting: number;
+  group_counts: Record<string, number>;
+  split: ConditionSplit;
+}
+
+export interface AiStatus {
+  enabled: boolean;
+  provider: string;
+  model: string | null;
+}
+
 export interface ProtocolData {
   id: string;
   name: string;
   active: boolean;
   ai_feedback_percentage: number;
+  condition_split: ConditionSplit;
+  total_rounds: number;
+  round_schedule: RoundSchedule;
+  ai_status?: AiStatus;
   enabled_stages: string[];
   ptsot_config: PtsotConfig;
   perspective_config: PerspectiveConfig;
@@ -42,7 +78,9 @@ export interface SessionMonitorItem {
   grade: string;
   section: string;
   roll_no: string;
-  condition: 'experimental' | 'control';
+  condition: Condition;
+  participant_code: string | null;
+  round_number: number;
   current_stage: string;
   status: string;
   started_at: string | null;
@@ -55,6 +93,8 @@ export interface SessionsSummary {
   in_progress: number;
   experimental_count: number;
   control_count: number;
+  natural_control_count: number;
+  unassigned_count: number;
 }
 
 export interface SessionsResponse {
@@ -79,6 +119,21 @@ export async function getProtocol(): Promise<ProtocolData> {
 
 export async function updateProtocol(data: Partial<ProtocolData>): Promise<ProtocolData> {
   const res = await apiClient.put<ProtocolData>('/admin/protocol', data);
+  return res.data;
+}
+
+export async function getRecommendedSchedule(totalRounds: number): Promise<RoundSchedule> {
+  const res = await apiClient.get<RoundSchedule>('/admin/protocol/recommended-schedule', { params: { total_rounds: totalRounds } });
+  return res.data;
+}
+
+export async function getAssignmentStatus(): Promise<AssignmentStatus> {
+  const res = await apiClient.get<AssignmentStatus>('/admin/assignment');
+  return res.data;
+}
+
+export async function assignGroups(): Promise<{ assigned: Record<string, number>; total: number }> {
+  const res = await apiClient.post('/admin/assign-groups');
   return res.data;
 }
 

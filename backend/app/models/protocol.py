@@ -15,6 +15,10 @@ DEFAULT_STAGES = [
     "done"
 ]
 
+# Study groups and their default share of new participants (percent)
+DEFAULT_CONDITION_SPLIT = {"experimental": 34, "control": 33, "natural_control": 33}
+DEFAULT_TOTAL_ROUNDS = 3
+
 # The participant and session records are created on the demographics page,
 # so a protocol without it would never save any data.
 REQUIRED_STAGES = {"demographics", "done"}
@@ -63,8 +67,21 @@ class StudyProtocol(Base):
     name: Mapped[str] = mapped_column(String, default="Standard Study Protocol")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     
-    # Target percentage of participants receiving AI feedback (0 to 100)
+    # Legacy two-group split; kept in sync with condition_split["experimental"]
     ai_feedback_percentage: Mapped[int] = mapped_column(Integer, default=50)
+
+    # JSON {"experimental": %, "control": %, "natural_control": %}, sums to 100
+    condition_split_json: Mapped[str] = mapped_column(
+        Text,
+        default=lambda: json.dumps(DEFAULT_CONDITION_SPLIT)
+    )
+
+    # Visits per participant: round 1 = pre-test, last round = post-test
+    total_rounds: Mapped[int] = mapped_column(Integer, default=DEFAULT_TOTAL_ROUNDS)
+
+    # JSON {group: [{"stages": [...], "feedback": [...]}, ...one per round]}.
+    # Null means the recommended design (services/study_design.default_schedule)
+    round_schedule_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # JSON-encoded array of active stage names for this protocol
     enabled_stages_json: Mapped[str] = mapped_column(

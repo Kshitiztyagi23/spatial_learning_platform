@@ -274,3 +274,13 @@
   color: #166534;
   font-weight: 600;
 }
+
+.condition-pill.natural_control {
+  background-color: #fef9c3;
+  color: #a16207;
+}
+
+.condition-pill.unassigned {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+}

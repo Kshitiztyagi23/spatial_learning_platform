@@ -186,8 +186,9 @@ export function PtsotTask() {
           const rt = finalReactionTimes[q.number] || 0;
           if (ans !== undefined) {
             await apiClient.post(`/sessions/${sessionId}/trials`, {
-              task_instance_id: sessionId,
+              task_type: 'ptsot',
               trial_number: q.number,
+              stimulus_id: `ptsot_q${q.number}`,
               response_value: String(ans),
               correct_response: String(q.correctAngle),
               reaction_time_ms: rt

@@ -38,10 +38,17 @@ async def test_get_session():
 @pytest.mark.asyncio
 async def test_next_stage():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        stages = (await ac.get("/api/v1/protocol/active")).json()["enabled_stages"]
+        protocol = (await ac.get("/api/v1/protocol/active")).json()
         session_id = await _create_test_session(ac)
-        response = await ac.get(f"/api/v1/sessions/{session_id}/next-stage")
-        assert response.status_code == 200
-        # A new session sits on the protocol's first stage; next is the one after it
-        expected = stages[1] if len(stages) > 1 else "done"
-        assert response.json()["stage_name"] == expected
+        session = (await ac.get(f"/api/v1/sessions/{session_id}")).json()
+        # The plan comes from the session itself (it depends on the random group)
+        stages = session["stages"]
+        assert stages[-1] == "done" and "demographics" in stages
+        # Each completed stage must lead to the very next one, never skip one
+        for done, expected in zip(stages, stages[1:]):
+            complete = await ac.post(
+                f"/api/v1/sessions/{session_id}/stages/{done}/complete", json={"stage_name": done}
+            )
+            assert complete.status_code == 200
+            response = await ac.get(f"/api/v1/sessions/{session_id}/next-stage")
+            assert response.json()["stage_name"] == expected

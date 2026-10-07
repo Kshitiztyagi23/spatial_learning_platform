@@ -6,6 +6,7 @@ import { Layout } from './shell/Layout';
 import { ConsentPage } from './tasks/intake/ConsentPage';
 import { DemographicsPage } from './tasks/intake/DemographicsPage';
 import { SpatialExperiencePage } from './tasks/intake/SpatialExperiencePage';
+import { ReturnPage } from './tasks/intake/ReturnPage';
 import { PtsotTask } from './tasks/ptsot/PtsotTask';
 import { PerspectiveTask } from './tasks/perspective/PerspectiveTask';
 import { LegoTask } from './tasks/lego/LegoTask';
@@ -30,6 +31,10 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <ConsentPage />,
+      },
+      {
+        path: 'return',
+        element: <ReturnPage />,
       },
       {
         path: 'demographics',

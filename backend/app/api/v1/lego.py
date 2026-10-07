@@ -7,27 +7,13 @@ from app.core.database import get_db
 from app.models.task_instance import TaskInstance
 from app.models.lego_event import LegoEvent
 from app.models.lego_submission import LegoSubmission
+from app.services.task_instances import get_or_create_task_instance
 from app.schemas.lego import LegoEventIn, LegoSubmitIn, LegoSubmitOut, LegoPuzzleResult
 
 router = APIRouter(prefix="/sessions/{session_id}/lego", tags=["lego"])
 
 async def get_active_lego_task_instance(session_id: str, db: AsyncSession) -> TaskInstance:
-    stmt = select(TaskInstance).where(
-        TaskInstance.session_id == session_id,
-        TaskInstance.task_type == "lego",
-        TaskInstance.status == "active"
-    )
-    result = await db.execute(stmt)
-    task_instance = result.scalar_one_or_none()
-    if not task_instance:
-        task_instance = TaskInstance(
-            session_id=session_id,
-            task_type="lego",
-            status="active"
-        )
-        db.add(task_instance)
-        await db.flush()
-    return task_instance
+    return await get_or_create_task_instance(session_id, "lego", db)
 
 @router.post("/events")
 @router.post("events", include_in_schema=False)

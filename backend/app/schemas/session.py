@@ -11,6 +11,13 @@ class SessionOut(BaseModel):
     current_stage: str
     status: str
     started_at: datetime
+    round_number: int = 1
+    total_rounds: int | None = None
+    round_type: str | None = None     # pre / training / post
+    participant_code: str | None = None
+    stages: list[str] = []            # this session's own stage plan
+    feedback_stages: list[str] = []   # stages that give hints this session
+    more_rounds: bool = False         # another session follows this one
     
     model_config = ConfigDict(from_attributes=True)
 

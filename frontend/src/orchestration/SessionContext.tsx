@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiClient } from '../api/client';
+import type { Condition } from '../api/types';
 
 export interface SessionState {
   participantId: string | null;
   sessionId: string | null;
-  condition: 'experimental' | 'control' | null;
+  condition: Condition | null;
+  participantCode: string | null;
   currentStage: string | null;
   enabledStages: string[] | null;
 }
@@ -13,6 +15,7 @@ const defaultState: SessionState = {
   participantId: null,
   sessionId: null,
   condition: null,
+  participantCode: null,
   currentStage: null,
   enabledStages: null,
 };
@@ -25,7 +28,13 @@ function loadPersisted(): SessionState {
   try {
     const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null');
     if (saved?.sessionId) {
-      return { ...defaultState, participantId: saved.participantId, sessionId: saved.sessionId, condition: saved.condition };
+      return {
+        ...defaultState,
+        participantId: saved.participantId,
+        sessionId: saved.sessionId,
+        condition: saved.condition,
+        participantCode: saved.participantCode ?? null,
+      };
     }
   } catch {
     // Corrupt entry: fall through to a fresh session
@@ -41,12 +50,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (state.sessionId) {
-      const { participantId, sessionId, condition } = state;
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ participantId, sessionId, condition }));
+      const { participantId, sessionId, condition, participantCode } = state;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ participantId, sessionId, condition, participantCode }));
     } else {
       sessionStorage.removeItem(STORAGE_KEY);
     }
-  }, [state.participantId, state.sessionId, state.condition]);
+  }, [state.participantId, state.sessionId, state.condition, state.participantCode]);
 
   const setSession = (partial: Partial<SessionState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -56,10 +65,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     apiClient.get('/protocol/active', { params: { _t: Date.now() } })
       .then((res) => {
         if (res.data?.enabled_stages) {
-          setState((prev) => ({
-            ...prev,
-            enabledStages: res.data.enabled_stages,
-          }));
+          // Before a session exists the protocol's stages are the best guess;
+          // once one exists its own plan (set by the session) wins.
+          setState((prev) => (prev.sessionId ? prev : { ...prev, enabledStages: res.data.enabled_stages }));
         }
       })
       .catch((err) => {

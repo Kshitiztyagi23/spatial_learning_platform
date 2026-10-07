@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ProtocolData, CatalogsData, updateProtocol } from '../api/admin';
+import { ProtocolData, CatalogsData, ConditionSplit, getRecommendedSchedule, updateProtocol } from '../api/admin';
+import { ScheduleEditor, resizeSchedule } from './ScheduleEditor';
+import { GroupAssignmentPanel } from './GroupAssignmentPanel';
 import { Button } from '../shared/Button';
 
 interface Props {
@@ -8,15 +10,10 @@ interface Props {
   onProtocolUpdated: (updated: ProtocolData) => void;
 }
 
-// `required` stages can't be switched off: the participant and session records
-// are created on the demographics page.
-const AVAILABLE_STAGES: { id: string; label: string; required?: boolean }[] = [
-  { id: 'intake_consent', label: '1. Consent & Information' },
-  { id: 'demographics', label: '2. Student Demographics (Grade, Section, Roll No)', required: true },
-  { id: 'spatial_experience', label: '3. Spatial Experience Survey (MCQs)' },
-  { id: 'ptsot', label: '4. Perspective Taking Test (PTSOT)' },
-  { id: 'spatial_perspective_taking', label: '5. Spatial Perspective Taking (Scenarios)' },
-  { id: 'lego', label: '6. 3D LEGO Construction Workbench' },
+const GROUPS: { id: keyof ConditionSplit; label: string; description: string }[] = [
+  { id: 'experimental', label: '🤖 AI feedback', description: 'Default: training tasks with AI hints' },
+  { id: 'control', label: 'Tasks, no feedback', description: 'Default: same training tasks, no hints' },
+  { id: 'natural_control', label: 'Tests only', description: 'Default: pre- and post-tests only' },
 ];
 
 export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Props) {
@@ -24,16 +21,17 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const splitChanged = (Object.keys(protocol.condition_split) as (keyof ConditionSplit)[])
+    .some(g => protocol.condition_split[g] !== formData.condition_split[g]);
+  const splitTotal = formData.condition_split.experimental + formData.condition_split.control + formData.condition_split.natural_control;
 
-  const handleStageToggle = (stageId: string) => {
-    const current = formData.enabled_stages;
-    if (AVAILABLE_STAGES.find(s => s.id === stageId)?.required) return;
-    const enabled = new Set(current);
-    if (enabled.has(stageId)) enabled.delete(stageId);
-    else enabled.add(stageId);
-    // Keep the study order fixed and 'done' as the final concluding stage
-    const next = [...AVAILABLE_STAGES.map(s => s.id).filter(id => enabled.has(id)), 'done'];
-    setFormData(prev => ({ ...prev, enabled_stages: next }));
+  const handleResetSchedule = async () => {
+    try {
+      const round_schedule = await getRecommendedSchedule(formData.total_rounds);
+      setFormData(prev => ({ ...prev, round_schedule }));
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Could not load the recommended design');
+    }
   };
 
   const handlePtsotToggle = (num: number) => {
@@ -99,89 +97,97 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
         </div>
       )}
 
-      {/* 1. AI Feedback Distribution Ratio */}
+      {/* 1. Study groups and rounds */}
       <div className="admin-card">
         <div className="admin-card-header">
           <div>
-            <h3 className="admin-card-title">1. AI Feedback Allocation Ratio</h3>
+            <h3 className="admin-card-title">1. Study Groups & Sessions</h3>
             <p className="admin-card-desc">
-              Control what percentage of participants receive AI scaffolded feedback (Experimental) vs minimal standard feedback (Control).
+              Every student does session 1 (the pre-test) without a group. Afterwards, press
+              "Assign groups now" to split everyone who finished it into groups in these proportions.
+              A student's group is permanent.
             </p>
           </div>
-          <span className="admin-badge">Weighted Random Engine</span>
+          <span className="admin-badge">Exact-proportion assignment</span>
         </div>
 
-        <div className="slider-container">
-          <div className="slider-labels-row">
-            <span style={{ color: '#2563eb' }}>
-              🤖 AI Feedback (Experimental): <b>{formData.ai_feedback_percentage}%</b>
-            </span>
-            <span style={{ color: '#475569' }}>
-              Standard Control: <b>{100 - formData.ai_feedback_percentage}%</b>
-            </span>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem' }}>
+          {GROUPS.map(group => (
+            <label key={group.id} className="item-chip-label" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.4rem', padding: '0.85rem 1rem' }}>
+              <span style={{ fontWeight: 600 }}>{group.label}</span>
+              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{group.description}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.condition_split[group.id]}
+                  onChange={(e) => {
+                    const value = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    setFormData(prev => ({ ...prev, condition_split: { ...prev.condition_split, [group.id]: value } }));
+                  }}
+                  style={{ width: '5rem', padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                />
+                %
+              </span>
+            </label>
+          ))}
+        </div>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 600, color: splitTotal === 100 ? '#16a34a' : '#dc2626' }}>
+            Total: {splitTotal}%{splitTotal !== 100 && ' (must be 100%)'}
+          </span>
+          <button type="button" className="admin-tab-btn" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} onClick={() => setFormData(prev => ({ ...prev, condition_split: { experimental: 34, control: 33, natural_control: 33 } }))}>
+            Equal thirds
+          </button>
+        </div>
+
+        <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label htmlFor="total-rounds" style={{ fontWeight: 600 }}>Sessions per student</label>
           <input
-            type="range"
-            min="0"
-            max="100"
-            step="5"
-            value={formData.ai_feedback_percentage}
-            onChange={(e) => setFormData(prev => ({ ...prev, ai_feedback_percentage: Number(e.target.value) }))}
-            className="slider-input"
+            id="total-rounds"
+            type="number"
+            min={2}
+            max={12}
+            value={formData.total_rounds}
+            onChange={(e) => {
+              const total_rounds = Math.max(2, Math.min(12, Number(e.target.value) || 2));
+              setFormData(prev => ({ ...prev, total_rounds, round_schedule: resizeSchedule(prev.round_schedule, total_rounds) }));
+            }}
+            style={{ width: '5rem', padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
           />
-
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button type="button" className="admin-tab-btn" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} onClick={() => setFormData(prev => ({ ...prev, ai_feedback_percentage: 50 }))}>
-              50 / 50 Standard
-            </button>
-            <button type="button" className="admin-tab-btn" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} onClick={() => setFormData(prev => ({ ...prev, ai_feedback_percentage: 100 }))}>
-              100% Experimental (All AI)
-            </button>
-            <button type="button" className="admin-tab-btn" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} onClick={() => setFormData(prev => ({ ...prev, ai_feedback_percentage: 0 }))}>
-              0% AI (All Control)
-            </button>
-          </div>
+          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+            Session 1 is the pre-test and session {formData.total_rounds} the post-test. What each group does in
+            each session is set in the schedule below.
+          </span>
         </div>
+
+        <GroupAssignmentPanel unsavedSplit={splitChanged} />
       </div>
 
-      {/* 2. Today's Active Tasks */}
+      {/* 2. Session schedule */}
       <div className="admin-card">
         <div className="admin-card-header">
           <div>
-            <h3 className="admin-card-title">2. Today's Active Tasks & Stages</h3>
+            <h3 className="admin-card-title">2. Session Schedule</h3>
             <p className="admin-card-desc">
-              Select which tasks students will perform in today's study session (allows running single tasks per week or full sessions).
+              For each group and session, choose which stages run and which tasks give hints. A session with
+              nothing ticked is skipped by that group. Changes apply to sessions that start after saving.
             </p>
           </div>
+          <span className="admin-badge" title={formData.ai_status?.model ?? undefined}>
+            {formData.ai_status?.enabled
+              ? `AI hints: ${formData.ai_status.provider} · ${formData.ai_status.model}`
+              : 'AI not configured: hints use fixed text'}
+          </span>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {AVAILABLE_STAGES.map(stage => {
-            const isChecked = stage.required || formData.enabled_stages.includes(stage.id);
-            return (
-              <label
-                key={stage.id}
-                className={`item-chip-label ${isChecked ? 'selected' : ''}`}
-                style={{ justifyContent: 'space-between', padding: '0.75rem 1rem' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    disabled={stage.required}
-                    onChange={() => handleStageToggle(stage.id)}
-                    style={{ width: '1.1rem', height: '1.1rem' }}
-                  />
-                  <span>{stage.label}</span>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: isChecked ? '#2563eb' : '#94a3b8', fontWeight: 600 }}>
-                  {stage.required ? 'REQUIRED' : isChecked ? 'ACTIVE TODAY' : 'SKIPPED'}
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <ScheduleEditor
+          schedule={formData.round_schedule}
+          groups={GROUPS}
+          onChange={(round_schedule) => setFormData(prev => ({ ...prev, round_schedule }))}
+          onReset={handleResetSchedule}
+        />
       </div>
 
       {/* 3. PTSOT Question Pool */}
@@ -365,22 +371,11 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
           );
         })}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
-          <label style={{ fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              type="checkbox"
-              checked={formData.lego_config.ai_hints_enabled}
-              onChange={(e) => setFormData(prev => ({ ...prev, lego_config: { ...prev.lego_config, ai_hints_enabled: e.target.checked } }))}
-              style={{ width: '1.1rem', height: '1.1rem' }}
-            />
-            Enable AI Diagnostic Guidance (for Experimental Group)
-          </label>
-        </div>
       </div>
 
       {/* Save Button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', position: 'sticky', bottom: '1.5rem', zIndex: 10 }}>
-        <Button variant="primary" onClick={handleSave} loading={saving}>
+        <Button variant="primary" onClick={handleSave} loading={saving} disabled={splitTotal !== 100}>
           Save & Apply Study Protocol ✓
         </Button>
       </div>
