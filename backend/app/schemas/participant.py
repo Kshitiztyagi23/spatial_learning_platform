@@ -19,6 +19,10 @@ class ParticipantOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class IntakeIn(ParticipantCreate):
+    # Extra answers from the details form, stored on the demographics stage
+    demographics: dict = {}
+
 class ParticipantLookupIn(BaseModel):
     code: str = Field(min_length=1, max_length=20)
 

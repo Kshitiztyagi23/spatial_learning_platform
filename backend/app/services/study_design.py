@@ -34,7 +34,7 @@ CONDITIONS = ("experimental", "control", "natural_control")
 UNASSIGNED = "unassigned"
 
 INTAKE_STAGES = ["intake_consent", "demographics", "spatial_experience"]
-TEST_STAGES = ["ptsot"]
+TEST_STAGES = ["ptsot", "window_test"]
 TRAINING_STAGES = ["spatial_perspective_taking", "lego"]
 
 # Stages that can show hints (the task has a hint implementation)

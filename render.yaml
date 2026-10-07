@@ -1,0 +1,29 @@
+# Render Blueprint: one free web service runs the API and serves the built
+# React app. Deploy: Render dashboard -> New -> Blueprint -> pick this repo.
+# Set the two `sync: false` values in the dashboard when asked.
+services:
+  - type: web
+    name: spatial-learning-platform
+    runtime: python
+    plan: free
+    region: ohio            # same region as the Neon database (us-east-2)
+    buildCommand: >-
+      pip install -r backend/requirements.txt &&
+      cd frontend && npm ci && npm run build
+    startCommand: >-
+      cd backend && alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false          # Neon connection string
+      - key: ADMIN_PASSCODE
+        sync: false          # passcode for /admin (share it with demo viewers)
+      - key: ADMIN_TOKEN_SECRET
+        generateValue: true  # keeps admin logins valid across restarts
+      - key: CORS_ORIGINS
+        value: '[]'          # same origin; nothing cross-site to allow

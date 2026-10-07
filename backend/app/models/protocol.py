@@ -10,6 +10,7 @@ DEFAULT_STAGES = [
     "demographics",
     "spatial_experience",
     "ptsot",
+    "window_test",
     "spatial_perspective_taking",
     "lego",
     "done"
@@ -94,6 +95,9 @@ class StudyProtocol(Base):
         Text, 
         default=lambda: json.dumps(DEFAULT_PTSOT_CONFIG)
     )
+
+    # JSON-encoded config for the window (mental rotation) test; null = defaults
+    window_config_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # JSON-encoded config for Spatial Perspective Taking task
     perspective_config_json: Mapped[str] = mapped_column(

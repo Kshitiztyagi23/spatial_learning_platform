@@ -6,13 +6,10 @@ parking lot for things that come up mid-conversation and shouldn't get lost.
 
 ## Next up
 
-- **Window / mental-rotation test** (in progress, Kshitiz). To plug it in:
-  add the stage to `DEFAULT_STAGES` (`backend/app/models/protocol.py`),
-  `STAGE_ROUTES` (`frontend/src/orchestration/stages.ts`) and
-  `SCHEDULE_STAGES` (`frontend/src/admin/ScheduleEditor.tsx`); add it to
-  `TEST_STAGES` in `backend/app/services/study_design.py` so the recommended
-  design uses it; record answers through `POST /sessions/{id}/trials` with a
-  new `task_type` and scoring rule in `backend/app/services/scoring.py`.
+- **Window test answer key.** The test is built (24 questions from the two
+  Google Forms), but the forms' public pages don't include the answers. Fill
+  in `WINDOW_ANSWER_KEY` in `backend/app/services/window_test.py`; answers
+  recorded before then are scored in exports once it's filled.
 - **Session feedback stage.** The plan's `SESSION_FEEDBACK` step at the end of
   each session isn't built.
 - **Rate-limit the code lookup.** `POST /participants/lookup` returns a first

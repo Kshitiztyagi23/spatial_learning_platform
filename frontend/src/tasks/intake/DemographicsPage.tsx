@@ -5,8 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '../../shared/Button';
 import { useSessionDispatch } from '../../orchestration/SessionContext';
-import { createParticipant } from '../../api/participants';
-import { createSession, completeStage, getNextStage } from '../../api/sessions';
+import { intake } from '../../api/participants';
 import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 
 const demographicsSchema = z.object({
@@ -57,39 +56,27 @@ export function DemographicsPage() {
     setLoading(true);
     setApiError('');
     try {
-      const participant = await createParticipant({
+      // One request: creates the participant, starts session 1 and records
+      // consent and these details (was five sequential requests)
+      const { participant, session } = await intake({
         name: finalName,
         age: data.age,
         gender: data.gender,
         grade: data.grade,
         section: data.section,
         roll_no: data.roll_no,
-        consent: true
+        consent: true,
+        demographics: { ...data, name: finalName },
       });
-      
-      setSession({ participantId: participant.id, condition: participant.condition, participantCode: participant.participant_code });
-
-      const session = await createSession({ participant_id: participant.id });
-      setSession({ sessionId: session.id, currentStage: session.current_stage, enabledStages: session.stages });
-
-      // Record consent stage completion ONLY if consent is part of the session sequence
-      if (session.current_stage === 'intake_consent') {
-        await completeStage(session.id, { 
-          stage_name: 'intake_consent', 
-          payload: { consent: true } 
-        });
-      }
-
-      // Record demographics stage completion
-      await completeStage(session.id, { 
-        stage_name: 'demographics', 
-        payload: { ...data, name: finalName } 
+      setSession({
+        participantId: participant.id,
+        condition: participant.condition,
+        participantCode: participant.participant_code,
+        sessionId: session.id,
+        currentStage: session.current_stage,
+        enabledStages: session.stages,
       });
-
-      const next = await getNextStage(session.id);
-      setSession({ currentStage: next.stage_name });
-      const route = STAGE_ROUTES[next.stage_name as Stage] || '/experience';
-      navigate(route);
+      navigate(STAGE_ROUTES[session.current_stage as Stage] || '/experience');
     } catch (err: any) {
       setApiError(err.message || 'Failed to submit data');
     } finally {

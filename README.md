@@ -29,6 +29,12 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `AI_MODEL` | Optional. Model name (Claude default: `claude-opus-5-5`; required for `openai`). |
 | `AI_BASE_URL` | Optional, `openai` only. The service's API URL; examples in `backend/.env.example`. |
 
+### Online demo (free, Render)
+`render.yaml` deploys the whole platform as **one free Render web service**: it builds the React app and the backend serves it, so students use `/` and researchers use `/admin` on the same link.
+1. On [render.com](https://render.com), sign in with GitHub → **New → Blueprint** → pick this repository.
+2. When asked, set `DATABASE_URL` (the Neon connection string) and `ADMIN_PASSCODE` (share it with demo viewers).
+3. Free services sleep after 15 minutes idle (the next visit then waits ~1 minute). To keep it awake, add a free uptime monitor (e.g. UptimeRobot) pinging `https://<your-app>.onrender.com/health` every 10 minutes.
+
 ---
 
 ## Repository Structure
@@ -81,12 +87,12 @@ The study compares how much students' spatial thinking improves across three gro
 
 | | Session 1 (pre-test) | Middle sessions | Final session (post-test) |
 |---|---|---|---|
-| Everyone | intake → PTSOT | | |
-| AI feedback | | park → LEGO, with hints | PTSOT |
-| Tasks, no feedback | | park → LEGO, no hints | PTSOT |
-| Tests only | | (skipped) | PTSOT |
+| Everyone | intake → PTSOT → window test | | |
+| AI feedback | | park → LEGO, with hints | PTSOT → window test |
+| Tasks, no feedback | | park → LEGO, no hints | PTSOT → window test |
+| Tests only | | (skipped) | PTSOT → window test |
 
-A later session with nothing ticked is skipped by that group. Each session's stages and hint settings are fixed when it starts, so editing the schedule only affects sessions that start afterwards. Exports label every row, including the session-1 pre-test, with the student's assigned group. The rules live in `backend/app/services/study_design.py`, which also explains how to add a new stage such as the window test.
+A later session with nothing ticked is skipped by that group. Each session's stages and hint settings are fixed when it starts, so editing the schedule only affects sessions that start afterwards. Exports label every row, including the session-1 pre-test, with the student's assigned group. The rules live in `backend/app/services/study_design.py`, which also explains how to add a new stage.
 
 ### Stages
 
@@ -94,9 +100,10 @@ A later session with nothing ticked is skipped by that group. Each session's sta
 2. **Demographics (`/demographics`)**: Grade, section, roll number, age, gender. Always on in round 1, because that's where the participant and session are created.
 3. **Spatial Experience (`/experience`)**: Likert questions on 3D games and building-block habits.
 4. **PTSOT (`/ptsot`)**: Instructions, 2 practice items with feedback, then the configured test questions under a countdown timer, with tab-switch detection. No hints for any group: it's the measure.
-5. **Spatial Perspective Taking (`/perspective`)**: Park scenes shown from several viewpoints; "where would X be?" direction questions.
-6. **LEGO Workbench (`/lego`)**: Rebuild a solid from its Front, Right, and Top views using a counted brick tray; only the puzzles selected in the protocol are offered, within the protocol's time limit. Every placement, removal, check, and rejected move is logged, and the submission is scored (accuracy = puzzles solved / offered, efficiency = solves / Check presses).
-7. **Done (`/done`)**: Completion screen, showing the student's code when more sessions follow.
+5. **Window Test (`/window-test`)**: mental-rotation questions from an easy (house) and a hard (window grid) set, 12 each; the student picks which of four rotated pictures matches. Researchers choose the questions, an optional time limit and shuffling in the admin console. The answer key lives only on the server (`backend/app/services/window_test.py`).
+6. **Spatial Perspective Taking (`/perspective`)**: Park scenes shown from several viewpoints; "where would X be?" direction questions.
+7. **LEGO Workbench (`/lego`)**: Rebuild a solid from its Front, Right, and Top views using a counted brick tray; only the puzzles selected in the protocol are offered, within the protocol's time limit. Every placement, removal, check, and rejected move is logged, and the submission is scored (accuracy = puzzles solved / offered, efficiency = solves / Check presses).
+8. **Done (`/done`)**: Completion screen, showing the student's code when more sessions follow.
 
 Refreshing the page resumes the session at the stage the server has on record. A new tab or browser starts a fresh participant.
 

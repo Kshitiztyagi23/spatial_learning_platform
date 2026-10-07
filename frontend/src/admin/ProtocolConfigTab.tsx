@@ -45,6 +45,25 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
     }));
   };
 
+  const windowOrder = catalogs.window_questions.map(q => q.id);
+  const sortWindow = (ids: string[]) => windowOrder.filter(id => ids.includes(id));
+
+  const handleWindowToggle = (id: string) => {
+    setFormData(prev => {
+      const current = prev.window_config.selected_questions;
+      const next = current.includes(id) ? current.filter(q => q !== id) : sortWindow([...current, id]);
+      return { ...prev, window_config: { ...prev.window_config, selected_questions: next } };
+    });
+  };
+
+  const setWindowSelection = (set: 'easy' | 'hard', on: boolean) => {
+    setFormData(prev => {
+      const setIds = catalogs.window_questions.filter(q => q.set === set).map(q => q.id);
+      const others = prev.window_config.selected_questions.filter(id => !setIds.includes(id));
+      return { ...prev, window_config: { ...prev.window_config, selected_questions: sortWindow(on ? [...others, ...setIds] : others) } };
+    });
+  };
+
   const handlePerspectiveToggle = (id: number) => {
     const current = formData.perspective_config.selected_scenarios;
     const next = current.includes(id)
@@ -256,6 +275,75 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
             ({Math.round(formData.ptsot_config.time_limit_seconds / 60)} minutes)
           </span>
+        </div>
+      </div>
+
+      {/* Window Test Question Pool */}
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <div>
+            <h3 className="admin-card-title">
+              Window Test Question Pool ({formData.window_config.selected_questions.length} / {catalogs.window_questions.length} Selected)
+            </h3>
+            <p className="admin-card-desc">
+              Pick questions from the easy (house) and hard (window grid) sets. Questions without an answer key
+              (marked ⚠) are recorded but not scored until the key is added on the server.
+            </p>
+          </div>
+        </div>
+
+        {(['easy', 'hard'] as const).map(set => {
+          const pool = catalogs.window_questions.filter(q => q.set === set);
+          const ids = pool.map(q => q.id);
+          const allOn = ids.every(id => formData.window_config.selected_questions.includes(id));
+          return (
+            <div key={set} style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                <b>{set === 'easy' ? 'Easy (house)' : 'Hard (window grid)'}</b>
+                <button
+                  type="button"
+                  className="admin-tab-btn"
+                  style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                  onClick={() => setWindowSelection(set, !allOn)}
+                >
+                  {allOn ? 'None' : 'All 12'}
+                </button>
+              </div>
+              <div className="items-grid">
+                {pool.map(q => {
+                  const isSelected = formData.window_config.selected_questions.includes(q.id);
+                  return (
+                    <label key={q.id} className={`item-chip-label ${isSelected ? 'selected' : ''}`} title={q.has_answer ? undefined : 'No answer key yet'}>
+                      <input type="checkbox" checked={isSelected} onChange={() => handleWindowToggle(q.id)} />
+                      <span>Q{q.number}{q.has_answer ? '' : ' ⚠'}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', flexWrap: 'wrap' }}>
+          <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Time limit (minutes, 0 = none)
+            <input
+              type="number"
+              min={0}
+              max={60}
+              value={Math.round(formData.window_config.time_limit_seconds / 60)}
+              onChange={(e) => setFormData(prev => ({ ...prev, window_config: { ...prev.window_config, time_limit_seconds: Math.max(0, Number(e.target.value) || 0) * 60 } }))}
+              style={{ width: '4.5rem', padding: '0.35rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+            />
+          </label>
+          <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={formData.window_config.shuffle}
+              onChange={(e) => setFormData(prev => ({ ...prev, window_config: { ...prev.window_config, shuffle: e.target.checked } }))}
+            />
+            Shuffle question order
+          </label>
         </div>
       </div>
 

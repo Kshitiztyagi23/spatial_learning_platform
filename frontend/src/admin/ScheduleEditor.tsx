@@ -8,6 +8,7 @@ export const SCHEDULE_STAGES: { id: string; label: string }[] = [
   { id: 'demographics', label: 'Details' },
   { id: 'spatial_experience', label: 'Experience survey' },
   { id: 'ptsot', label: 'PTSOT' },
+  { id: 'window_test', label: 'Window test' },
   { id: 'spatial_perspective_taking', label: 'Park perspective' },
   { id: 'lego', label: 'LEGO' },
 ];

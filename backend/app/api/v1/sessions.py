@@ -14,10 +14,11 @@ from app.services.orchestration import (
     protocol_total_rounds,
     session_feedback_stages,
 )
-from app.services.rounds import open_session, progress
+from app.services.session_flow import start_round
 from app.services.study_design import Schedule, has_more_rounds, order_stages, round_plan, round_type
 import json
 from app.models.protocol import ALL_LEGO_PUZZLE_IDS, normalize_puzzle_ids
+from app.services.window_test import DEFAULT_WINDOW_CONFIG, WINDOW_QUESTION_IDS
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -53,46 +54,9 @@ async def create_session(
         raise HTTPException(status_code=404, detail="Participant not found")
         
     protocol = await get_or_create_active_protocol(db)
-    total_rounds = protocol_total_rounds(protocol)
-    schedule = protocol_schedule(protocol)
-
-    # Same student coming back mid-session (new device, closed tab): resume
-    existing = await open_session(participant.id, db)
-    if existing:
-        return session_out(existing, participant, total_rounds, schedule)
-
-    status, round_number = await progress(participant, schedule, db)
-    if status == "waiting":
-        raise HTTPException(status_code=409, detail="Your next session isn't ready yet. Ask your teacher.")
-    if status == "complete":
-        raise HTTPException(status_code=409, detail="You have finished every session of this study.")
-
-    plan = round_plan(schedule, participant.condition, round_number)
-    stages = plan["stages"]
-
-    session = Session(
-        participant_id=participant.id,
-        condition=participant.condition,
-        round_number=round_number,
-        current_stage=stages[0],
-        stage_sequence_json=json.dumps(stages),
-        feedback_stages_json=json.dumps(plan["feedback"])
-    )
-    db.add(session)
-    await db.flush()
-    
-    audit_log = AuditLog(
-        actor_type="system",
-        entity_type="session",
-        entity_id=session.id,
-        action="session_created",
-        details_json=json.dumps({"round_number": round_number, "stages": stages, "feedback": plan["feedback"]})
-    )
-    db.add(audit_log)
-    
+    session = await start_round(participant, protocol, db)
     await db.commit()
-    await db.refresh(session)
-    return session_out(session, participant, total_rounds, schedule)
+    return session_out(session, participant, protocol_total_rounds(protocol), protocol_schedule(protocol))
 
 @router.get("/{session_id}", response_model=SessionOut)
 async def get_session(
@@ -152,6 +116,16 @@ async def get_task_config_endpoint(
             "selected_questions": ptsot_cfg.get("selected_questions", list(range(1, 13))),
             "time_limit_seconds": ptsot_cfg.get("time_limit_seconds", 300),
             "shuffle": ptsot_cfg.get("shuffle", False)
+        }
+    elif task_type == "window_test":
+        window_cfg = json.loads(protocol.window_config_json) if protocol.window_config_json else DEFAULT_WINDOW_CONFIG
+        return {
+            "task_type": "window_test",
+            "condition": session.condition,
+            "ai_hints_enabled": "window_test" in hint_stages,
+            "selected_questions": window_cfg.get("selected_questions", WINDOW_QUESTION_IDS),
+            "time_limit_seconds": window_cfg.get("time_limit_seconds", 0),
+            "shuffle": window_cfg.get("shuffle", False)
         }
     elif task_type in ["spatial_perspective_taking", "perspective"]:
         persp_cfg = json.loads(protocol.perspective_config_json)

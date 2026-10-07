@@ -31,12 +31,14 @@ from app.schemas.protocol import (
     ProtocolOut,
     PtsotConfig,
     PerspectiveConfig,
+    WindowConfig,
     ConditionSplit,
     LegoConfig
 )
 from app.services.orchestration import get_or_create_active_protocol, protocol_condition_split, protocol_schedule, protocol_total_rounds
 from app.services.study_design import CONDITIONS, UNASSIGNED, allocate_groups, default_schedule, first_round_stages, normalize_schedule
 from app.services.ai_feedback import ai_status
+from app.services.window_test import DEFAULT_WINDOW_CONFIG, WINDOW_ANSWER_KEY, WINDOW_QUESTION_IDS, window_correct_answer
 
 _token_key = (settings.admin_token_secret or secrets.token_hex(32)).encode()
 
@@ -101,8 +103,13 @@ async def get_catalogs():
     perspective_scenarios = [
         {"id": i, "label": f"Scenario {i}", "name": f"Visual Scenario {i}"} for i in range(1, 9)
     ]
+    window_questions = [
+        {"id": q, "set": q.split("-")[0], "number": int(q.split("-")[1]), "has_answer": WINDOW_ANSWER_KEY[q] is not None}
+        for q in WINDOW_QUESTION_IDS
+    ]
     return {
         "ptsot_questions": ptsot_questions,
+        "window_questions": window_questions,
         "perspective_scenarios": perspective_scenarios,
         "lego_puzzles": AVAILABLE_LEGO_PUZZLES
     }
@@ -114,6 +121,7 @@ async def get_protocol(db: AsyncSession = Depends(get_db)):
     schedule = protocol_schedule(protocol)
     ptsot = json.loads(protocol.ptsot_config_json)
     perspective = json.loads(protocol.perspective_config_json)
+    window = json.loads(protocol.window_config_json) if protocol.window_config_json else DEFAULT_WINDOW_CONFIG
     lego = json.loads(protocol.lego_config_json)
 
     return ProtocolOut(
@@ -127,6 +135,7 @@ async def get_protocol(db: AsyncSession = Depends(get_db)):
         ai_status=ai_status(),
         enabled_stages=first_round_stages(schedule),
         ptsot_config=PtsotConfig(**ptsot),
+        window_config=WindowConfig(**window),
         perspective_config=PerspectiveConfig(**perspective),
         lego_config=LegoConfig(**lego),
         updated_at=protocol.updated_at
@@ -145,6 +154,7 @@ async def update_protocol(payload: ProtocolUpdateIn, db: AsyncSession = Depends(
     protocol.round_schedule_json = json.dumps(schedule)
     protocol.enabled_stages_json = json.dumps(first_round_stages(schedule))
     protocol.ptsot_config_json = json.dumps(payload.ptsot_config.model_dump())
+    protocol.window_config_json = json.dumps(payload.window_config.model_dump())
     protocol.perspective_config_json = json.dumps(payload.perspective_config.model_dump())
     protocol.lego_config_json = json.dumps(payload.lego_config.model_dump())
     protocol.updated_at = datetime.utcnow()
@@ -301,13 +311,22 @@ async def export_data(export_type: str, db: AsyncSession = Depends(get_db)):
                 p.created_at.isoformat() if p.created_at else ""
             ])
 
-    elif export_type in ("ptsot_trials", "perspective_trials"):
-        wanted = "ptsot" if export_type == "ptsot_trials" else "spatial_perspective_taking"
+    elif export_type in ("ptsot_trials", "perspective_trials", "window_trials"):
+        wanted = {
+            "ptsot_trials": "ptsot",
+            "perspective_trials": "spatial_perspective_taking",
+            "window_trials": "window_test",
+        }[export_type]
         if wanted == "ptsot":
             writer.writerow(ctx_cols + [
                 "trial_number", "stimulus_id", "correct_angle",
                 "response_angle", "angular_error_deg", "correct_within_22_5",
                 "reaction_time_ms", "created_at"
+            ])
+        elif wanted == "window_test":
+            writer.writerow(ctx_cols + [
+                "trial_number", "question_id", "question_set", "correct_answer",
+                "response", "correct", "reaction_time_ms", "created_at"
             ])
         else:
             writer.writerow(ctx_cols + [
@@ -325,8 +344,10 @@ async def export_data(export_type: str, db: AsyncSession = Depends(get_db)):
         for t, r, ti, sess in result.all():
             if classify_trial_task(ti.task_type, t.correct_response) != wanted:
                 continue
-            # Re-score so rows saved before the scoring fixes are reported correctly
-            correct = score_trial(wanted, r.response_value, t.correct_response)
+            # Re-score so rows saved before the scoring fixes (or before the
+            # window answer key was filled in) are reported correctly
+            answer = window_correct_answer(t.stimulus_id) if wanted == "window_test" else t.correct_response
+            correct = score_trial(wanted, r.response_value, answer)
             created = r.created_at.isoformat() if r.created_at else ""
             rt = "" if r.reaction_time_ms is None else r.reaction_time_ms
             if wanted == "ptsot":
@@ -336,6 +357,12 @@ async def export_data(export_type: str, db: AsyncSession = Depends(get_db)):
                     t.correct_response or "", r.response_value,
                     "" if err is None else err, "" if correct is None else correct,
                     rt, created
+                ])
+            elif wanted == "window_test":
+                writer.writerow(ctx(sess) + [
+                    t.trial_number, t.stimulus_id or "", (t.stimulus_id or "").split("-")[0],
+                    answer or "", r.response_value,
+                    "" if correct is None else correct, rt, created
                 ])
             else:
                 writer.writerow(ctx(sess) + [
