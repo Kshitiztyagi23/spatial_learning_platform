@@ -87,6 +87,13 @@ export async function listSessions(): Promise<SessionsResponse> {
   return res.data;
 }
 
-export function getExportUrl(exportType: string): string {
-  return `/api/v1/admin/exports/${exportType}`;
+export async function downloadExport(exportType: string): Promise<void> {
+  const res = await apiClient.get<Blob>(`/admin/exports/${exportType}`, { responseType: 'blob' });
+  const match = /filename=([^;]+)/.exec(res.headers['content-disposition'] ?? '');
+  const url = URL.createObjectURL(res.data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = match?.[1] ?? `${exportType}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }

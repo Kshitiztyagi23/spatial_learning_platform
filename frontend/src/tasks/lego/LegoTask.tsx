@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '@fontsource-variable/atkinson-hyperlegible-next';
 import './styles/tokens.css';
@@ -17,12 +17,42 @@ import { useSessionContext, useSessionDispatch } from '../../orchestration/Sessi
 import { completeStage, getNextStage } from '../../api/sessions';
 import { STAGE_ROUTES, type Stage as StudyStage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
+import { startLegoTelemetry } from './telemetry';
 
 export function LegoTask() {
   const navigate = useNavigate();
   const { sessionId } = useSessionContext();
   const setSession = useSessionDispatch();
   const [isFinishing, setIsFinishing] = useState(false);
+  const startedAt = useRef(Date.now());
+  const telemetry = useRef<ReturnType<typeof startLegoTelemetry> | null>(null);
+
+  // Restrict the puzzle set to what the active study protocol selects, then
+  // start logging build actions (logging failures never interrupt the child)
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    const send = (event: object) => {
+      apiClient.post(`/sessions/${sessionId}/lego/events`, event)
+        .catch(err => console.warn('LEGO event not recorded:', err));
+    };
+    apiClient.get(`/sessions/${sessionId}/task-config/lego`)
+      .then(res => {
+        const ids = res.data?.selected_puzzles;
+        if (!cancelled && Array.isArray(ids)) useSession.getState().setPuzzleFilter(ids);
+      })
+      .catch(err => {
+        console.warn('Using full LEGO puzzle set:', err);
+      })
+      .finally(() => {
+        if (!cancelled) telemetry.current = startLegoTelemetry(send);
+      });
+    return () => {
+      cancelled = true;
+      telemetry.current?.stop();
+      telemetry.current = null;
+    };
+  }, [sessionId]);
 
   // Keyboard navigation & tools (R to rotate, E to erase, Enter to check)
   useEffect(() => {
@@ -72,8 +102,10 @@ export function LegoTask() {
         const state = useSession.getState();
         // Submit final build state
         await apiClient.post(`/sessions/${sessionId}/lego/submit`, {
-          final_build_json: JSON.stringify(state.placed),
-          duration_seconds: 600
+          final_build_json: JSON.stringify({ puzzle_id: state.derived.puzzle.id, placed: state.placed }),
+          duration_seconds: Math.round((Date.now() - startedAt.current) / 1000),
+          puzzle_count: state.puzzleCount,
+          results: telemetry.current?.results() ?? []
         });
 
         // Complete LEGO stage

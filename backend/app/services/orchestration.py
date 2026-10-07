@@ -8,7 +8,8 @@ from app.models.protocol import (
     DEFAULT_STAGES,
     DEFAULT_PTSOT_CONFIG,
     DEFAULT_PERSPECTIVE_CONFIG,
-    DEFAULT_LEGO_CONFIG
+    DEFAULT_LEGO_CONFIG,
+    normalize_stages
 )
 
 STAGE_SEQUENCE = DEFAULT_STAGES
@@ -37,7 +38,7 @@ def get_session_stage_sequence(session: Session) -> list[str]:
         try:
             seq = json.loads(session.stage_sequence_json)
             if isinstance(seq, list) and len(seq) > 0:
-                return seq
+                return normalize_stages(seq)
         except Exception:
             pass
     return STAGE_SEQUENCE

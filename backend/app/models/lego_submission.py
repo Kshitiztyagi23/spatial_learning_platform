@@ -10,6 +10,7 @@ class LegoSubmission(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     task_instance_id: Mapped[str] = mapped_column(String, ForeignKey("task_instances.id"), nullable=False)
     final_build_json: Mapped[str | None] = mapped_column(String, nullable=True)
+    results_json: Mapped[str | None] = mapped_column(String, nullable=True)
     accuracy: Mapped[float | None] = mapped_column(Float, nullable=True)
     efficiency_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)

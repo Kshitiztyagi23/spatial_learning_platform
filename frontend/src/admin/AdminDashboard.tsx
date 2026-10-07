@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProtocol, getCatalogs, ProtocolData, CatalogsData } from '../api/admin';
+import { ADMIN_TOKEN_KEY, ADMIN_AUTH_EXPIRED_EVENT } from '../api/client';
 import { AdminPasscodeModal } from './AdminPasscodeModal';
 import { ProtocolConfigTab } from './ProtocolConfigTab';
 import { LiveSessionMonitorTab } from './LiveSessionMonitorTab';
@@ -10,8 +11,15 @@ import './admin.css';
 export function AdminDashboard() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!sessionStorage.getItem('admin_token');
+    return !!sessionStorage.getItem(ADMIN_TOKEN_KEY);
   });
+
+  // Any admin request rejected with 401 sends the researcher back to the passcode screen
+  useEffect(() => {
+    const onExpired = () => setIsAuthenticated(false);
+    window.addEventListener(ADMIN_AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(ADMIN_AUTH_EXPIRED_EVENT, onExpired);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'protocol' | 'sessions' | 'exports'>('protocol');
   const [protocol, setProtocol] = useState<ProtocolData | null>(null);
@@ -43,7 +51,7 @@ export function AdminDashboard() {
   }, [isAuthenticated]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     setIsAuthenticated(false);
   };
 

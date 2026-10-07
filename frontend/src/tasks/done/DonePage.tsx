@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useSessionContext } from '../../orchestration/SessionContext';
+import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
 import { completeStage } from '../../api/sessions';
 
 export function DonePage() {
   const { sessionId } = useSessionContext();
+  const setSession = useSessionDispatch();
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -11,6 +12,8 @@ export function DonePage() {
       if (sessionId) {
         try {
           await completeStage(sessionId, { stage_name: 'done' });
+          // Forget the finished session so the next participant on this tab starts fresh
+          setSession({ sessionId: null, participantId: null, condition: null });
         } catch (err: any) {
           setError(err.message || 'Failed to mark session as done');
         }

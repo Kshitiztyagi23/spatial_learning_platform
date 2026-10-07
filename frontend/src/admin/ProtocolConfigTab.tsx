@@ -8,9 +8,11 @@ interface Props {
   onProtocolUpdated: (updated: ProtocolData) => void;
 }
 
-const AVAILABLE_STAGES = [
+// `required` stages can't be switched off: the participant and session records
+// are created on the demographics page.
+const AVAILABLE_STAGES: { id: string; label: string; required?: boolean }[] = [
   { id: 'intake_consent', label: '1. Consent & Information' },
-  { id: 'demographics', label: '2. Student Demographics (Grade, Section, Roll No)' },
+  { id: 'demographics', label: '2. Student Demographics (Grade, Section, Roll No)', required: true },
   { id: 'spatial_experience', label: '3. Spatial Experience Survey (MCQs)' },
   { id: 'ptsot', label: '4. Perspective Taking Test (PTSOT)' },
   { id: 'spatial_perspective_taking', label: '5. Spatial Perspective Taking (Scenarios)' },
@@ -25,16 +27,12 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
 
   const handleStageToggle = (stageId: string) => {
     const current = formData.enabled_stages;
-    let next: string[];
-    if (current.includes(stageId)) {
-      next = current.filter(s => s !== stageId);
-    } else {
-      next = [...current, stageId];
-    }
-    // Always keep 'done' as final concluding stage
-    if (!next.includes('done')) {
-      next.push('done');
-    }
+    if (AVAILABLE_STAGES.find(s => s.id === stageId)?.required) return;
+    const enabled = new Set(current);
+    if (enabled.has(stageId)) enabled.delete(stageId);
+    else enabled.add(stageId);
+    // Keep the study order fixed and 'done' as the final concluding stage
+    const next = [...AVAILABLE_STAGES.map(s => s.id).filter(id => enabled.has(id)), 'done'];
     setFormData(prev => ({ ...prev, enabled_stages: next }));
   };
 
@@ -160,7 +158,7 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {AVAILABLE_STAGES.map(stage => {
-            const isChecked = formData.enabled_stages.includes(stage.id);
+            const isChecked = stage.required || formData.enabled_stages.includes(stage.id);
             return (
               <label
                 key={stage.id}
@@ -171,13 +169,14 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
                   <input
                     type="checkbox"
                     checked={isChecked}
+                    disabled={stage.required}
                     onChange={() => handleStageToggle(stage.id)}
                     style={{ width: '1.1rem', height: '1.1rem' }}
                   />
                   <span>{stage.label}</span>
                 </div>
                 <span style={{ fontSize: '0.75rem', color: isChecked ? '#2563eb' : '#94a3b8', fontWeight: 600 }}>
-                  {isChecked ? 'ACTIVE TODAY' : 'SKIPPED'}
+                  {stage.required ? 'REQUIRED' : isChecked ? 'ACTIVE TODAY' : 'SKIPPED'}
                 </span>
               </label>
             );

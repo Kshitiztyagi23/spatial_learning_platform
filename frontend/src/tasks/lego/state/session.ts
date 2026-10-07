@@ -27,6 +27,9 @@ interface Session {
   puzzleList: { id: string; name: string }[];
 
   loadPuzzle(id: string): void;
+  /** Restrict the playable set to these ids (catalog order kept). Unknown ids
+   *  are ignored; an empty result falls back to the full catalog. */
+  setPuzzleFilter(ids: string[]): void;
   selectType(id: PieceTypeId | null): void;
   rotateCW(): void;
   place(origin: Vec3): void;
@@ -41,10 +44,6 @@ interface Session {
 const catalog = loadPuzzles();
 const firstPuzzle = catalog[0];
 if (!firstPuzzle) throw new Error("No puzzles found under src/data/puzzles.");
-
-function indexOf(id: string): number {
-  return catalog.findIndex((p) => p.id === id);
-}
 
 function findPuzzle(id: string) {
   const puzzle = catalog.find((p) => p.id === id);
@@ -70,6 +69,7 @@ export const useSession = create<Session>((set, get) => ({
   loadPuzzle(id) {
     const puzzle = findPuzzle(id);
     const derived = derivePuzzle(puzzle);
+    const { puzzleList } = get();
     set({
       derived,
       placed: [],
@@ -79,9 +79,17 @@ export const useSession = create<Session>((set, get) => ({
       mode: "build",
       lastCheck: null,
       lastReject: null,
-      puzzleIndex: indexOf(puzzle.id),
-      puzzleCount: catalog.length,
+      puzzleIndex: Math.max(0, puzzleList.findIndex((p) => p.id === puzzle.id)),
+      puzzleCount: puzzleList.length,
     });
+  },
+
+  setPuzzleFilter(ids) {
+    const wanted = new Set(ids);
+    const filtered = catalog.filter((p) => wanted.has(p.id));
+    const active = filtered.length > 0 ? filtered : catalog;
+    set({ puzzleList: active.map((p) => ({ id: p.id, name: p.name })) });
+    get().loadPuzzle(active[0]!.id);
   },
 
   selectType(id) {
@@ -151,14 +159,14 @@ export const useSession = create<Session>((set, get) => ({
   },
 
   nextPuzzle() {
-    const { puzzleIndex, loadPuzzle } = get();
-    const next = catalog[(puzzleIndex + 1) % catalog.length];
+    const { puzzleIndex, puzzleList, loadPuzzle } = get();
+    const next = puzzleList[(puzzleIndex + 1) % puzzleList.length];
     if (next) loadPuzzle(next.id);
   },
 
   prevPuzzle() {
-    const { puzzleIndex, loadPuzzle } = get();
-    const prev = catalog[(puzzleIndex - 1 + catalog.length) % catalog.length];
+    const { puzzleIndex, puzzleList, loadPuzzle } = get();
+    const prev = puzzleList[(puzzleIndex - 1 + puzzleList.length) % puzzleList.length];
     if (prev) loadPuzzle(prev.id);
   },
 }));

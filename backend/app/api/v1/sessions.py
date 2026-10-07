@@ -13,6 +13,7 @@ from app.services.orchestration import (
     get_session_stage_sequence
 )
 import json
+from app.models.protocol import ALL_LEGO_PUZZLE_IDS, normalize_puzzle_ids, normalize_stages
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -30,14 +31,13 @@ async def create_session(
         raise HTTPException(status_code=404, detail="Participant not found")
         
     protocol = await get_or_create_active_protocol(db)
-    stages = json.loads(protocol.enabled_stages_json)
-    first_stage = stages[0] if stages else "intake_consent"
+    stages = normalize_stages(json.loads(protocol.enabled_stages_json))
 
     session = Session(
         participant_id=participant.id,
         condition=participant.condition,
-        current_stage=first_stage,
-        stage_sequence_json=protocol.enabled_stages_json
+        current_stage=stages[0],
+        stage_sequence_json=json.dumps(stages)
     )
     db.add(session)
     await db.flush()
@@ -127,7 +127,7 @@ async def get_task_config_endpoint(
             "task_type": "lego",
             "condition": session.condition,
             "ai_hints_enabled": is_experimental and lego_cfg.get("ai_hints_enabled", True),
-            "selected_puzzles": lego_cfg.get("selected_puzzles", ["tut-01", "tut-02", "tut-03", "tut-04", "tut-05", "tut-06"]),
+            "selected_puzzles": normalize_puzzle_ids(lego_cfg.get("selected_puzzles", ALL_LEGO_PUZZLE_IDS)),
             "time_limit_seconds": lego_cfg.get("time_limit_seconds", 600)
         }
     else:

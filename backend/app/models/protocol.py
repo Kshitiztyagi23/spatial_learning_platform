@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer, Boolean, DateTime, Text
@@ -14,6 +15,17 @@ DEFAULT_STAGES = [
     "done"
 ]
 
+# The participant and session records are created on the demographics page,
+# so a protocol without it would never save any data.
+REQUIRED_STAGES = {"demographics", "done"}
+
+def normalize_stages(stages: list[str]) -> list[str]:
+    """Order enabled stages canonically, force required stages in and keep
+    "done" last, dropping unknown names, so a protocol can never end a session
+    early or skip session creation."""
+    enabled = set(stages) | REQUIRED_STAGES
+    return [s for s in DEFAULT_STAGES if s in enabled and s != "done"] + ["done"]
+
 DEFAULT_PTSOT_CONFIG = {
     "selected_questions": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     "time_limit_seconds": 300,
@@ -24,10 +36,22 @@ DEFAULT_PERSPECTIVE_CONFIG = {
     "selected_scenarios": [1, 2, 3, 4, 5, 6, 7, 8]
 }
 
+# Ids as declared in frontend/src/tasks/lego/data/puzzles/*.json
+ALL_LEGO_PUZZLE_IDS = [
+    "tut-01", "tut-02", "tut-03", "tut-04", "tut-05", "tut-06",
+    "easy-01", "easy-02", "easy-03", "easy-04",
+    "medium-01", "medium-02", "medium-03", "medium-04",
+    "hard-01", "hard-02", "hard-03", "hard-04",
+    "b-01", "c-01", "d-01",
+]
+
+def normalize_puzzle_ids(ids: list[str]) -> list[str]:
+    """Strip the file-order prefix ("07-easy-01" -> "easy-01") that older
+    admin catalogs saved, so stored protocols match the puzzle JSON ids."""
+    return [re.sub(r"^\d+-", "", i) for i in ids]
+
 DEFAULT_LEGO_CONFIG = {
-    "selected_puzzles": [
-        "tut-01", "tut-02", "tut-03", "tut-04", "tut-05", "tut-06"
-    ],
+    "selected_puzzles": list(ALL_LEGO_PUZZLE_IDS),
     "time_limit_seconds": 600,
     "ai_hints_enabled": True
 }

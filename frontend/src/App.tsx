@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { SessionProvider } from './orchestration/SessionContext';
+import { ResumeGate } from './orchestration/ResumeGate';
 import { Layout } from './shell/Layout';
 import { ConsentPage } from './tasks/intake/ConsentPage';
 import { DemographicsPage } from './tasks/intake/DemographicsPage';
@@ -14,7 +15,9 @@ import { AdminDashboard } from './admin/AdminDashboard';
 function RootLayout() {
   return (
     <Layout>
-      <Outlet />
+      <ResumeGate>
+        <Outlet />
+      </ResumeGate>
     </Layout>
   );
 }
