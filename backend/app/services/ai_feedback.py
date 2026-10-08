@@ -123,6 +123,8 @@ async def _openai_compatible(system: str, user: str) -> tuple[str, str]:
         "model": active_model(),
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }
+    if settings.ai_reasoning_effort:
+        body["reasoning_effort"] = settings.ai_reasoning_effort
     try:
         async with _http_client() as client:
             res = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)

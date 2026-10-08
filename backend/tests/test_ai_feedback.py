@@ -18,6 +18,7 @@ def configure(monkeypatch, provider="anthropic", key="test-key", model="", base_
     monkeypatch.setattr(settings, "ai_api_key", key)
     monkeypatch.setattr(settings, "ai_model", model)
     monkeypatch.setattr(settings, "ai_base_url", base_url)
+    monkeypatch.setattr(settings, "ai_reasoning_effort", "")  # don't inherit backend/.env
 
 
 def fake_provider(monkeypatch, reply=None, error=None):
@@ -126,6 +127,11 @@ async def test_openai_compatible_request_shape(monkeypatch):
     assert request.headers["Authorization"] == "Bearer sk-test"
     body = json.loads(request.content)
     assert body["model"] == "gemini-2.5-flash" and body["messages"][0]["role"] == "system"
+    assert "reasoning_effort" not in body                     # only sent when configured
+
+    monkeypatch.setattr(settings, "ai_reasoning_effort", "none")
+    await phrase_hint("spatial_perspective_taking", RULE, {})
+    assert json.loads(seen[-1].content)["reasoning_effort"] == "none"
 
 
 @pytest.mark.asyncio

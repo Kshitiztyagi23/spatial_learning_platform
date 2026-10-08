@@ -2,16 +2,23 @@ import { Scenario, DirectionOption } from './types';
 
 const DEFAULT_OPTIONS: DirectionOption[] = ['Right', 'Left', 'Front', 'Behind'];
 
-// Helper to create standard 6 image placeholders per scenario from template folder
+// Scenarios that have real photos (compressed JPEGs, ~0.8 MB for main views).
+// The rest use the SVG placeholders until their photos are added. To add a
+// scenario's photos: put main_view_1/2.jpg and perspective_a-d.jpg in its
+// templates folder (resize photos to ~2000 px wide first) and add its id here.
+const SCENARIOS_WITH_PHOTOS = new Set([1]);
+
+// Helper to create the 6 images per scenario from its template folder
 function createScenarioImages(scenarioId: number) {
   const base = `/perspective/templates/scenario_${scenarioId}`;
+  const ext = SCENARIOS_WITH_PHOTOS.has(scenarioId) ? 'jpg' : 'svg';
   return [
-    { id: 1, label: 'Main View 1', src: `${base}/main_view_1.png`, description: 'Overall scene overview' },
-    { id: 2, label: 'Main View 2', src: `${base}/main_view_2.png`, description: 'Secondary scene perspective' },
-    { id: 3, label: "A's Perspective", src: `${base}/perspective_a.png`, description: 'Point of view of character A' },
-    { id: 4, label: "B's Perspective", src: `${base}/perspective_b.png`, description: 'Point of view of character B' },
-    { id: 5, label: "C's Perspective", src: `${base}/perspective_c.png`, description: 'Point of view of character C' },
-    { id: 6, label: "D's Perspective", src: `${base}/perspective_d.png`, description: 'Point of view of character D' },
+    { id: 1, label: 'Main View 1', src: `${base}/main_view_1.${ext}`, description: 'Overall scene overview' },
+    { id: 2, label: 'Main View 2', src: `${base}/main_view_2.${ext}`, description: 'Secondary scene perspective' },
+    { id: 3, label: "A's Perspective", src: `${base}/perspective_a.${ext}`, description: 'Point of view of character A' },
+    { id: 4, label: "B's Perspective", src: `${base}/perspective_b.${ext}`, description: 'Point of view of character B' },
+    { id: 5, label: "C's Perspective", src: `${base}/perspective_c.${ext}`, description: 'Point of view of character C' },
+    { id: 6, label: "D's Perspective", src: `${base}/perspective_d.${ext}`, description: 'Point of view of character D' },
   ];
 }
 

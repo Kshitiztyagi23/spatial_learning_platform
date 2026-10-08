@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = ""                      # empty = provider default (anthropic: claude-opus-5-5)
     ai_base_url: str = ""                   # openai provider only; empty = https://api.openai.com/v1
+    # openai provider only: sent as reasoning_effort when set. "none" turns
+    # Gemini 2.5 thinking off: ~1.2 s per hint instead of ~4 s, same quality
+    ai_reasoning_effort: str = ""
     ai_feedback_enabled: bool = True
     ai_feedback_timeout_seconds: float = 6.0
     
