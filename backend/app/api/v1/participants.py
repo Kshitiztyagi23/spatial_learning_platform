@@ -15,7 +15,7 @@ from app.services.session_flow import record_stage, start_round
 from pydantic import BaseModel
 from app.services.orchestration import get_or_create_active_protocol, protocol_schedule, protocol_total_rounds
 from app.services.rounds import open_session, progress
-from app.services.study_design import UNASSIGNED, generate_participant_code, normalize_code
+from app.services.study_design import UNASSIGNED, gate_for_active_round, generate_participant_code, normalize_code
 
 router = APIRouter(prefix="/participants", tags=["participants"])
 
@@ -110,11 +110,13 @@ async def lookup_participant(payload: ParticipantLookupIn, db: AsyncSession = De
         status, next_round = "ready", resuming.round_number
     else:
         status, next_round = await progress(participant, protocol_schedule(protocol), db)
+        status = gate_for_active_round(status, next_round, protocol.active_round)
 
     return ParticipantLookupOut(
         participant_id=participant.id,
         first_name=participant.name.strip().split()[0] if participant.name.strip() else "",
         status=status,
+        active_round=protocol.active_round,
         next_round=next_round,
         total_rounds=total_rounds,
         study_complete=status == "complete",

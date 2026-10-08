@@ -93,6 +93,16 @@ export function ReturnPage() {
         </form>
       )}
 
+      {found && found.status === 'not_today' && (
+        <>
+          <p style={{ marginBottom: '1.5rem' }}>
+            Hi {found.first_name}, today the class is doing session {found.active_round}.
+            Your next session is session {found.next_round}. Ask your teacher.
+          </p>
+          <Button variant="secondary" onClick={reset}>Use a different code</Button>
+        </>
+      )}
+
       {found && found.status === 'waiting' && (
         <>
           <p style={{ marginBottom: '1.5rem' }}>

@@ -170,7 +170,10 @@ export function LiveSessionMonitorTab() {
                         {CONDITION_LABELS[s.condition] ?? s.condition}
                       </span>
                     </td>
-                    <td>{s.round_number}</td>
+                    <td>
+                      {s.round_number}
+                      {s.session_label && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{s.session_label}</div>}
+                    </td>
                     <td>
                       <span className={`stage-pill ${s.current_stage === 'done' ? 'done' : ''}`}>
                         {s.current_stage}

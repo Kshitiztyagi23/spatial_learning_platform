@@ -30,8 +30,10 @@ class ParticipantLookupOut(BaseModel):
     participant_id: str
     first_name: str
     # ready: a session is waiting; waiting: finished session 1, no group yet;
+    # not_today: their next session isn't the one running today;
     # complete: finished every session
     status: str
+    active_round: int | None = None
     next_round: int | None
     total_rounds: int
     study_complete: bool
