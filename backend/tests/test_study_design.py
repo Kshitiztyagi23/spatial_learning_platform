@@ -66,3 +66,11 @@ def test_allocation_matches_split_exactly():
 
 def test_typed_codes_are_forgiving():
     assert normalize_code(" k7q-2xm ") == "K7Q2XM"
+
+
+def test_gate_for_active_round():
+    from app.services.study_design import gate_for_active_round
+    assert gate_for_active_round("ready", 2, None) == "ready"        # any session
+    assert gate_for_active_round("ready", 2, 2) == "ready"
+    assert gate_for_active_round("ready", 3, 2) == "not_today"
+    assert gate_for_active_round("waiting", None, 2) == "waiting"   # other states unchanged

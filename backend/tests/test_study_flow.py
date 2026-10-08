@@ -391,3 +391,61 @@ async def test_intake_retries_when_a_code_clashes(ac, monkeypatch):
         "name": "Second", "age": 12, "gender": "female", "grade": "Grade 7", "section": "A", "roll_no": "2", "consent": True,
     })
     assert res.status_code == 200 and res.json()["participant"]["participant_code"] == "ZZZZZZ"
+
+
+@pytest.mark.asyncio
+async def test_active_session_gates_who_can_start_and_labels_the_data(ac, admin):
+    async def set_today(active, label):
+        await _set_protocol(ac, admin, GROUP_ONLY["control"])
+        res = await ac.put("/api/v1/admin/protocol", headers=admin, json={
+            "condition_split": GROUP_ONLY["control"], "total_rounds": 3,
+            "active_round": active, "run_label": label,
+            "ptsot_config": {}, "perspective_config": {}, "lego_config": {},
+        })
+        assert res.status_code == 200, res.text
+        assert (res.json()["active_round"], res.json()["run_label"]) == (active, label)
+
+    intake = {"name": "Asha Rao", "age": 12, "gender": "female", "grade": "Grade 7",
+              "section": "A", "roll_no": "7", "consent": True}
+
+    # Session 1 day: new students can join; their sessions carry the label
+    await set_today(1, "Session 1 - 15 Oct - School A")
+    s1 = (await ac.post("/api/v1/participants/intake", json=intake)).json()
+    code, sid = s1["participant"]["participant_code"], s1["session"]["id"]
+    await _finish(ac, sid)
+    await _assign(ac, admin)
+    found = await _lookup(ac, code)
+    assert (found["status"], found["next_round"], found["active_round"]) == ("not_today", 2, 1)
+
+    # Session 2 day: no new registrations; returning students start session 2
+    await set_today(2, "Session 2 - 22 Oct - School A")
+    blocked = await ac.post("/api/v1/participants/intake", json={**intake, "name": "Late"})
+    assert blocked.status_code == 409 and "session 1" in blocked.json()["detail"]
+    assert (await _lookup(ac, code))["status"] == "ready"
+    pid = (await ac.get(f"/api/v1/sessions/{sid}")).json()["participant_id"]
+    s2 = await _start(ac, pid)
+    assert s2["round_number"] == 2
+
+    # An unfinished session can always be finished, even if the day changes
+    await set_today(3, None)
+    assert (await _start(ac, pid))["id"] == s2["id"]
+    await _finish(ac, s2["id"])
+    assert (await _lookup(ac, code))["status"] == "ready"      # session 3 is running
+
+    # Back to "any session": students continue at their own pace
+    await set_today(None, None)
+    assert (await _lookup(ac, code))["status"] == "ready"
+
+    header = (await ac.get("/api/v1/admin/exports/ptsot_trials", headers=admin)).text.splitlines()[0]
+    assert "round_number,session_label" in header
+    sessions = (await ac.get("/api/v1/admin/sessions", headers=admin)).json()["sessions"]
+    assert {s["round_number"]: s["session_label"] for s in sessions} == {
+        1: "Session 1 - 15 Oct - School A", 2: "Session 2 - 22 Oct - School A",
+    }
+
+    # The running session can't be beyond the number of sessions
+    bad = await ac.put("/api/v1/admin/protocol", headers=admin, json={
+        "condition_split": GROUP_ONLY["control"], "total_rounds": 3, "active_round": 5,
+        "ptsot_config": {}, "perspective_config": {}, "lego_config": {},
+    })
+    assert bad.status_code == 422

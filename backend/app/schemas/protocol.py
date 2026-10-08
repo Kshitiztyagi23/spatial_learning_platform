@@ -66,6 +66,9 @@ class ProtocolUpdateIn(BaseModel):
     name: Optional[str] = "Standard Study Protocol"
     condition_split: ConditionSplit = Field(default_factory=ConditionSplit)
     total_rounds: int = Field(ge=2, le=12, default=3)
+    # The session being run today; None = students continue at their own pace
+    active_round: Optional[int] = Field(default=None, ge=1, le=12)
+    run_label: Optional[str] = Field(default=None, max_length=120)
     # Omitted = recommended design
     round_schedule: Optional[RoundSchedule] = None
     # Derived from the schedule on save; accepted for older clients
@@ -87,6 +90,8 @@ class ProtocolOut(BaseModel):
     ai_feedback_percentage: int
     condition_split: ConditionSplit
     total_rounds: int
+    active_round: Optional[int] = None
+    run_label: Optional[str] = None
     round_schedule: RoundSchedule
     ai_status: Dict[str, Optional[object]] = {}
     enabled_stages: List[str]

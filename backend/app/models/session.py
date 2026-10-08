@@ -18,3 +18,5 @@ class Session(Base):
     stage_sequence_json: Mapped[str | None] = mapped_column(String, nullable=True)
     # Stages that give hints in this session, fixed when the session starts
     feedback_stages_json: Mapped[str | None] = mapped_column(String, nullable=True)
+    # The admin's label for the sitting this session was part of
+    run_label: Mapped[str | None] = mapped_column(String, nullable=True)

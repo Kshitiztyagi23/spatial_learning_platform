@@ -21,7 +21,8 @@ export interface ParticipantOut {
 export interface ParticipantLookupOut {
   participant_id: string
   first_name: string
-  status: 'ready' | 'waiting' | 'complete'
+  status: 'ready' | 'waiting' | 'not_today' | 'complete'
+  active_round: number | null
   next_round: number | null
   total_rounds: number
   study_complete: boolean

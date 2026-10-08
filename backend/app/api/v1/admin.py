@@ -131,6 +131,8 @@ async def get_protocol(db: AsyncSession = Depends(get_db)):
         ai_feedback_percentage=protocol.ai_feedback_percentage,
         condition_split=ConditionSplit(**protocol_condition_split(protocol)),
         total_rounds=protocol_total_rounds(protocol),
+        active_round=protocol.active_round,
+        run_label=protocol.run_label,
         round_schedule=schedule,
         ai_status=ai_status(),
         enabled_stages=first_round_stages(schedule),
@@ -149,6 +151,10 @@ async def update_protocol(payload: ProtocolUpdateIn, db: AsyncSession = Depends(
     protocol.condition_split_json = json.dumps(payload.condition_split.model_dump())
     protocol.ai_feedback_percentage = payload.condition_split.experimental
     protocol.total_rounds = payload.total_rounds
+    if payload.active_round is not None and payload.active_round > payload.total_rounds:
+        raise HTTPException(status_code=422, detail="The session running today must be within the number of sessions")
+    protocol.active_round = payload.active_round
+    protocol.run_label = (payload.run_label or "").strip() or None
     raw_schedule = payload.round_schedule.model_dump() if payload.round_schedule is not None else None
     schedule = normalize_schedule(raw_schedule, payload.total_rounds)
     protocol.round_schedule_json = json.dumps(schedule)
@@ -262,6 +268,7 @@ async def list_sessions(db: AsyncSession = Depends(get_db)):
             "condition": p.condition,
             "participant_code": p.participant_code,
             "round_number": s.round_number,
+            "session_label": s.run_label,
             "current_stage": s.current_stage,
             "status": s.status,
             "started_at": s.started_at.isoformat() if s.started_at else None,
@@ -291,11 +298,12 @@ async def export_data(export_type: str, db: AsyncSession = Depends(get_db)):
     # comparisons by group need no extra joins in R / SPSS / pandas.
     # `condition` is the participant's group as assigned now, so session-1
     # (pre-test) rows, recorded before assignment, carry the group too.
-    ctx_cols = ["session_id", "participant_id", "condition", "round_number"]
+    ctx_cols = ["session_id", "participant_id", "condition", "round_number", "session_label"]
     groups = dict((await db.execute(select(Participant.id, Participant.condition))).all())
 
     def ctx(session: Session) -> list:
-        return [session.id, session.participant_id, groups.get(session.participant_id, session.condition), session.round_number]
+        return [session.id, session.participant_id, groups.get(session.participant_id, session.condition),
+                session.round_number, session.run_label or ""]
 
     if export_type == "participants":
         writer.writerow([

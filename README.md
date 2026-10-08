@@ -92,6 +92,8 @@ The study compares how much students' spatial thinking improves across three gro
 | Tasks, no feedback | | park → LEGO, no hints | PTSOT → window test |
 | Tests only | | (skipped) | PTSOT → window test |
 
+**Session running now:** on study days, choose in the admin console which session the class is doing (or "Any" to let students continue at their own pace). With a session chosen, only students due for it can start, new students can only join on session 1, and unfinished sessions can always be finished. An optional label (e.g. "Session 2 - 15 Oct - School A") is saved on every session started while it's set and appears as `session_label` in every export, next to `round_number`.
+
 A later session with nothing ticked is skipped by that group. Each session's stages and hint settings are fixed when it starts, so editing the schedule only affects sessions that start afterwards. Exports label every row, including the session-1 pre-test, with the student's assigned group. The rules live in `backend/app/services/study_design.py`, which also explains how to add a new stage.
 
 ### Stages

@@ -84,6 +84,13 @@ class StudyProtocol(Base):
     # Null means the recommended design (services/study_design.default_schedule)
     round_schedule_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # The session being run today (1..total_rounds); null = students continue
+    # at their own pace
+    active_round: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Free-text label stamped on every session started while it is set,
+    # e.g. "Session 2 - 15 Oct - School A"
+    run_label: Mapped[str | None] = mapped_column(String, nullable=True)
+
     # JSON-encoded array of active stage names for this protocol
     enabled_stages_json: Mapped[str] = mapped_column(
         Text, 

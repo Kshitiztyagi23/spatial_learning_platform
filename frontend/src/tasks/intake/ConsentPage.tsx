@@ -9,6 +9,7 @@ export function ConsentPage() {
   const [name, setName] = useState('');
   const [consent, setConsent] = useState(false);
   const [checkingProtocol, setCheckingProtocol] = useState(true);
+  const [activeRound, setActiveRound] = useState<number | null>(null);
   const navigate = useNavigate();
   const setSession = useSessionDispatch();
 
@@ -19,7 +20,12 @@ export function ConsentPage() {
         if (!isMounted) return;
         const stages: string[] = res.data?.enabled_stages || [];
         setSession({ enabledStages: stages });
-        if (stages.length > 0 && !stages.includes('intake_consent')) {
+        const active = typeof res.data?.active_round === 'number' ? res.data.active_round : null;
+        setActiveRound(active);
+        if (active !== null && active !== 1) {
+          // A later session is running: only returning students can continue
+          setCheckingProtocol(false);
+        } else if (stages.length > 0 && !stages.includes('intake_consent')) {
           const firstStage = (res.data.first_stage as Stage) || 'demographics';
           const targetRoute = STAGE_ROUTES[firstStage] || '/demographics';
           navigate(targetRoute, { replace: true });
@@ -46,6 +52,20 @@ export function ConsentPage() {
   };
 
   const isFormValid = name.trim().length > 0 && consent;
+
+  if (!checkingProtocol && activeRound !== null && activeRound !== 1) {
+    return (
+      <div className="card">
+        <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 'bold' }}>Welcome back</h2>
+        <p style={{ marginBottom: '1.5rem', color: 'var(--muted)' }}>
+          Today the class is doing session {activeRound}. Use the code you were given after your first session.
+        </p>
+        <Link to="/return" className="btn-primary" style={{ display: 'inline-block', padding: '0.6rem 1.2rem', borderRadius: '6px', textDecoration: 'none' }}>
+          Continue with your code
+        </Link>
+      </div>
+    );
+  }
 
   if (checkingProtocol) {
     return (

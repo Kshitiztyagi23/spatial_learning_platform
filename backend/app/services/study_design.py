@@ -196,3 +196,17 @@ def generate_participant_code() -> str:
 def normalize_code(code: str) -> str:
     """Accept lowercase, spaces and dashes when a student types their code."""
     return "".join(ch for ch in code.upper() if ch.isalnum())
+
+
+def gate_for_active_round(status: str, round_number: int | None, active_round: int | None) -> str:
+    """When researchers set the session running today, a participant whose
+    next session is a different one gets "not_today" instead of "ready"."""
+    if active_round is None or status != "ready" or round_number == active_round:
+        return status
+    return "not_today"
+
+
+def not_today_message(round_number: int, active_round: int) -> str:
+    if round_number == 1:
+        return "New students can only join when session 1 is running. Ask your teacher."
+    return f"Today the class is doing session {active_round}. Your next session is session {round_number}. Ask your teacher."

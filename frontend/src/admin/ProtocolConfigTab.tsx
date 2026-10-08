@@ -172,7 +172,12 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
             value={formData.total_rounds}
             onChange={(e) => {
               const total_rounds = Math.max(2, Math.min(12, Number(e.target.value) || 2));
-              setFormData(prev => ({ ...prev, total_rounds, round_schedule: resizeSchedule(prev.round_schedule, total_rounds) }));
+              setFormData(prev => ({
+                ...prev,
+                total_rounds,
+                round_schedule: resizeSchedule(prev.round_schedule, total_rounds),
+                active_round: prev.active_round && prev.active_round > total_rounds ? null : prev.active_round,
+              }));
             }}
             style={{ width: '5rem', padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
           />
@@ -180,6 +185,41 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
             Session 1 is the pre-test and session {formData.total_rounds} the post-test. What each group does in
             each session is set in the schedule below.
           </span>
+        </div>
+
+        <div style={{ marginTop: '1.25rem', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontWeight: 600 }}>
+              Session running now
+              <select
+                value={formData.active_round ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, active_round: e.target.value ? Number(e.target.value) : null }))}
+                style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 400 }}
+              >
+                <option value="">Any (students continue at their own pace)</option>
+                {Array.from({ length: formData.total_rounds }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>
+                    Session {n}{n === 1 ? ' (pre-test, new students join)' : n === formData.total_rounds ? ' (post-test)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontWeight: 600, flex: 1, minWidth: '240px' }}>
+              Label for this sitting (saved on every session started)
+              <input
+                type="text"
+                maxLength={120}
+                placeholder="e.g. Session 2 - 15 Oct - School A"
+                value={formData.run_label ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, run_label: e.target.value || null }))}
+                style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 400 }}
+              />
+            </label>
+          </div>
+          <p style={{ margin: '0.6rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+            With a session chosen, only students due for it can start, and new students can only join on session 1.
+            Unfinished sessions can always be finished. Save the protocol to apply.
+          </p>
         </div>
 
         <GroupAssignmentPanel unsavedSplit={splitChanged} />

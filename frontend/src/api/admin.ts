@@ -61,6 +61,10 @@ export interface ProtocolData {
   ai_feedback_percentage: number;
   condition_split: ConditionSplit;
   total_rounds: number;
+  /** Session being run today; null = students continue at their own pace */
+  active_round: number | null;
+  /** Label stamped on sessions started while set, e.g. "Session 2 - 15 Oct" */
+  run_label: string | null;
   round_schedule: RoundSchedule;
   ai_status?: AiStatus;
   enabled_stages: string[];
@@ -89,6 +93,7 @@ export interface SessionMonitorItem {
   condition: Condition;
   participant_code: string | null;
   round_number: number;
+  session_label: string | null;
   current_stage: string;
   status: string;
   started_at: string | null;
