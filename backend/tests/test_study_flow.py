@@ -152,13 +152,23 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
     assert fb["message"] == "Look at the side view. Count the layers."
     again = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "attempt": 2, "diagnoses": diagnoses})).json()
     assert again["shown"] is False  # inside the cooldown window
+    # The server checks builds itself: tut-01 wrong once then solved, easy-01 wrong
+    from app.services.lego_engine import get_puzzle
+    tut = get_puzzle("tut-01")["solution"]
+    wrong = (await ac.post(f"{base}/lego/check", json={"puzzle_id": "tut-01", "placed": tut[:-1]})).json()
+    assert wrong["outcome"] == "views-mismatch" and wrong["diagnoses"]
+    solved = (await ac.post(f"{base}/lego/check", json={"puzzle_id": "tut-01", "placed": tut})).json()
+    assert solved["outcome"] == "solved"
+    await ac.post(f"{base}/lego/check", json={"puzzle_id": "easy-01", "placed": get_puzzle("easy-01")["solution"][:1]})
+    await ac.post(f"{base}/lego/check", json={"puzzle_id": "easy-01", "placed": []})   # empty: not counted
+    # A browser claiming a correct check is refused
+    faked = await ac.post(f"{base}/lego/events", json={"event_type": "check", "puzzle_id": "easy-01", "is_correct": True})
+    assert faked.status_code == 400
     sub = (await ac.post(f"{base}/lego/submit", json={
-        "final_build_json": "{}", "duration_seconds": 95, "puzzle_count": 2,
-        "results": [
-            {"puzzle_id": "tut-01", "solved": True, "checks": 2, "placements": 3},
-            {"puzzle_id": "easy-01", "solved": False, "checks": 1, "placements": 2},
-        ],
+        "final_build_json": "{}", "duration_seconds": 95, "puzzle_count": 99,
+        "results": [{"puzzle_id": "easy-01", "solved": True, "checks": 1, "placements": 1}],  # ignored
     })).json()
+    # 1 of 2 offered puzzles solved; 1 solve over 3 non-empty checks
     assert sub["accuracy"] == 0.5 and sub["efficiency_score"] == pytest.approx(1 / 3)
     await _finish(ac, s2["id"])
 
@@ -185,7 +195,10 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
     persp = await export("perspective_trials")
     assert [(r["round_number"], r["response"], r["correct"]) for r in persp] == [("2", "Left", "False")]
     events = await export("lego_events")
-    assert [(r["session_id"], r["puzzle_id"], r["event_type"]) for r in events] == [(s2["id"], "tut-01", "place")]
+    assert [(r["puzzle_id"], r["event_type"], r["is_correct"]) for r in events] == [
+        ("tut-01", "place", ""), ("tut-01", "check", "False"), ("tut-01", "check", "True"),
+        ("easy-01", "check", "False"), ("easy-01", "check", "False"),
+    ]
     assert (await export("lego_submissions"))[0]["accuracy"] == "0.5"
     feedback = await export("feedback_events")
     assert sorted((r["task_type"], r["corrected_after"], r["generated_by"]) for r in feedback) == [

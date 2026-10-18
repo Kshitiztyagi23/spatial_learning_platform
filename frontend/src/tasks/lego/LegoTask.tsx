@@ -18,6 +18,7 @@ import { completeStage, getNextStage } from '../../api/sessions';
 import { STAGE_ROUTES, type Stage as StudyStage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
 import { startLegoTelemetry } from './telemetry';
+import type { Placement } from './core/types';
 import { useLegoHints } from './hints';
 
 function formatClock(seconds: number) {
@@ -47,6 +48,13 @@ export function LegoTask() {
       apiClient.post(`/sessions/${sessionId}/lego/events`, event)
         .catch(err => console.warn('LEGO event not recorded:', err));
     };
+    // The server re-runs every Check and records the result that counts
+    const checkOnServer = (puzzleId: string, placed: Placement[]) => {
+      apiClient.post(`/sessions/${sessionId}/lego/check`, {
+        puzzle_id: puzzleId,
+        placed: placed.map(({ typeId, rotation, origin }) => ({ typeId, rotation, origin })),
+      }).catch(err => console.warn('LEGO check not recorded:', err));
+    };
     apiClient.get(`/sessions/${sessionId}/task-config/lego`)
       .then(res => {
         if (cancelled) return;
@@ -60,7 +68,7 @@ export function LegoTask() {
         console.warn('Using full LEGO puzzle set:', err);
       })
       .finally(() => {
-        if (!cancelled) telemetry.current = startLegoTelemetry(send);
+        if (!cancelled) telemetry.current = startLegoTelemetry(send, checkOnServer);
       });
     return () => {
       cancelled = true;
@@ -119,9 +127,7 @@ export function LegoTask() {
         await apiClient.post(`/sessions/${sessionId}/lego/submit`, {
           final_build_json: JSON.stringify({ puzzle_id: state.derived.puzzle.id, placed: state.placed }),
           duration_seconds: Math.round((Date.now() - startedAt.current) / 1000),
-          puzzle_count: state.puzzleCount,
-          results: telemetry.current?.results() ?? []
-        });
+        });  // scored on the server from its own check records
 
         // Complete LEGO stage
         await completeStage(sessionId, {

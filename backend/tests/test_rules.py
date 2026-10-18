@@ -1,10 +1,9 @@
 from app.api.v1.lego import score_lego_results
 from app.models.protocol import normalize_stages, normalize_puzzle_ids
-from app.schemas.lego import LegoPuzzleResult
 
 
-def _r(solved: bool, checks: int) -> LegoPuzzleResult:
-    return LegoPuzzleResult(puzzle_id="p", solved=solved, checks=checks, placements=0)
+def _r(solved: bool, checks: int) -> dict:
+    return {"puzzle_id": "p", "solved": solved, "checks": checks, "placements": 0}
 
 
 def test_stages_reordered_with_done_last():

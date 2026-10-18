@@ -2,7 +2,7 @@ import { useSession } from './state/session';
 import type { Placement } from './core/types';
 
 export interface LegoEventPayload {
-  event_type: 'puzzle_start' | 'place' | 'remove' | 'clear_board' | 'check' | 'reject';
+  event_type: 'puzzle_start' | 'place' | 'remove' | 'clear_board' | 'reject';
   puzzle_id: string;
   block_id?: string;
   block_type?: string;
@@ -10,13 +10,6 @@ export interface LegoEventPayload {
   rotation_json?: string;
   is_correct?: boolean;
   details_json?: string;
-}
-
-export interface LegoPuzzleResult {
-  puzzle_id: string;
-  solved: boolean;
-  checks: number;
-  placements: number;
 }
 
 function placementFields(p: Placement) {
@@ -30,23 +23,15 @@ function placementFields(p: Placement) {
 
 /**
  * Watches the LEGO session store and reports every build action through
- * `send`, while keeping a per-puzzle tally for the final submission. Kept
- * outside the store so the game core stays free of study concerns.
+ * `send`. Each Check also goes to `checkOnServer`, which records the
+ * authoritative result (the server re-runs the check; scores come from
+ * there). Kept outside the store so the game core stays free of study concerns.
  */
-export function startLegoTelemetry(send: (event: LegoEventPayload) => void) {
-  const results = new Map<string, LegoPuzzleResult>();
-
-  const tally = (puzzleId: string) => {
-    let r = results.get(puzzleId);
-    if (!r) {
-      r = { puzzle_id: puzzleId, solved: false, checks: 0, placements: 0 };
-      results.set(puzzleId, r);
-    }
-    return r;
-  };
-
+export function startLegoTelemetry(
+  send: (event: LegoEventPayload) => void,
+  checkOnServer: (puzzleId: string, placed: Placement[]) => void,
+) {
   const startPuzzle = (puzzleId: string) => {
-    tally(puzzleId);
     send({ event_type: 'puzzle_start', puzzle_id: puzzleId });
   };
 
@@ -67,7 +52,6 @@ export function startLegoTelemetry(send: (event: LegoEventPayload) => void) {
       const removed = prev.placed.filter((p) => !after.has(p.instanceId));
 
       for (const p of added) {
-        tally(puzzleId).placements += 1;
         send({ event_type: 'place', puzzle_id: puzzleId, ...placementFields(p) });
       }
       if (state.placed.length === 0 && removed.length > 1) {
@@ -80,17 +64,7 @@ export function startLegoTelemetry(send: (event: LegoEventPayload) => void) {
     }
 
     if (state.lastCheck && state.lastCheck !== prev.lastCheck) {
-      const { outcome, views, bricksPlaced, bricksTotal, diagnoses } = state.lastCheck;
-      const solved = outcome === 'solved';
-      const r = tally(puzzleId);
-      r.checks += 1;
-      r.solved = r.solved || solved;
-      send({
-        event_type: 'check',
-        puzzle_id: puzzleId,
-        is_correct: solved,
-        details_json: JSON.stringify({ outcome, views, bricksPlaced, bricksTotal, diagnoses }),
-      });
+      checkOnServer(puzzleId, state.placed);
     }
 
     if (state.lastReject && state.lastReject !== prev.lastReject) {
@@ -102,8 +76,5 @@ export function startLegoTelemetry(send: (event: LegoEventPayload) => void) {
     }
   });
 
-  return {
-    results: () => [...results.values()],
-    stop: unsubscribe,
-  };
+  return { stop: unsubscribe };
 }
