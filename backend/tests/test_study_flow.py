@@ -244,7 +244,7 @@ async def test_tests_only_group_goes_straight_to_post_test(ac, admin):
 @pytest.mark.asyncio
 async def test_admin_schedule_controls_every_session(ac, admin):
     schedule = {
-        "session_1": {"stages": ["demographics", "ptsot", "lego"], "feedback": ["lego"]},  # no hints in session 1
+        "session_1": {"stages": ["demographics", "ptsot", "lego"], "feedback": ["lego"]},  # hints for everyone
         "groups": {
             "control": [
                 {"stages": ["ptsot", "lego"], "feedback": ["lego"]},   # hints only here
@@ -257,12 +257,18 @@ async def test_admin_schedule_controls_every_session(ac, admin):
         },
     }
     saved = (await _set_protocol(ac, admin, GROUP_ONLY["control"], schedule=schedule))["round_schedule"]
-    assert saved["session_1"] == {"stages": ["demographics", "ptsot", "lego"], "feedback": []}
+    assert saved["session_1"] == {"stages": ["demographics", "ptsot", "lego"], "feedback": ["lego"]}
     recommended = (await ac.get("/api/v1/admin/protocol/recommended-schedule?total_rounds=3", headers=admin)).json()
     assert saved["groups"]["experimental"] == recommended["groups"]["experimental"]
 
     p = await _participant(ac, "Ravi", "9")
-    assert await _finish(ac, (await _start(ac, p["id"]))["id"]) == ["demographics", "ptsot", "lego", "done"]
+    first = await _start(ac, p["id"])
+    # Session 1 hints reach a student who has no group yet
+    hint = (await ac.post(f"/api/v1/sessions/{first['id']}/feedback", json={
+        "task_type": "lego", "attempt": 1, "diagnoses": [{"code": "height-wrong"}],
+    })).json()
+    assert hint["shown"] is True
+    assert await _finish(ac, first["id"]) == ["demographics", "ptsot", "lego", "done"]
     await _assign(ac, admin)
     expected = [(["ptsot", "lego", "done"], True), (["ptsot", "done"], False)]
     for stages, lego_hints in expected:

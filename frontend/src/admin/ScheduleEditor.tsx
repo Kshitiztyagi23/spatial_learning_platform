@@ -83,8 +83,8 @@ function ScheduleRow({ label, plan, firstSession, onChange }: RowProps) {
               <input type="checkbox" checked={running} disabled={locked} onChange={() => toggleStage(stage.id)} aria-label={`${stage.label} runs`} />
               runs
             </label>
-            {/* No hints in session 1: nobody has a group yet */}
-            {!firstSession && FEEDBACK_STAGES.has(stage.id) && running && (
+            {/* In session 1 hints apply to every student (nobody has a group yet) */}
+            {FEEDBACK_STAGES.has(stage.id) && running && (
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: hintsOn ? '#1d4ed8' : '#64748b', marginTop: '0.25rem' }}>
                 <input type="checkbox" checked={hintsOn} onChange={() => toggleHints(stage.id)} aria-label={`${stage.label} hints`} />
                 🤖 hints
@@ -134,6 +134,7 @@ export function ScheduleEditor({ schedule, groups, onChange, onReset }: Props) {
       <h4 style={{ margin: '0 0 0.25rem 0' }}>Session 1: every student (before groups)</h4>
       <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: '#64748b' }}>
         Students get their code at the end. Assign groups (above) once they've finished it.
+        Hints ticked here go to every student, as there are no groups yet; leave them off for a clean pre-test.
       </p>
       <ScheduleTable>
         <ScheduleRow

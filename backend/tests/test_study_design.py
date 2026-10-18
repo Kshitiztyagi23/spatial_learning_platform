@@ -32,7 +32,7 @@ def test_normalize_repairs_a_bad_schedule():
         "groups": {"experimental": [{"stages": ["demographics", "lego", "ptsot"], "feedback": ["lego", "ptsot"]}]},
     }
     s = normalize_schedule(raw, 3)
-    assert s["session_1"] == {"stages": ["demographics", "lego"], "feedback": []}
+    assert s["session_1"] == {"stages": ["demographics", "lego"], "feedback": ["lego"]}
     assert s["groups"]["experimental"][0] == {"stages": ["ptsot", "lego"], "feedback": ["lego"]}
     assert s["groups"]["experimental"][1] == default_schedule(3)["groups"]["experimental"][1]
     assert s["groups"]["control"] == default_schedule(3)["groups"]["control"]
