@@ -4,7 +4,7 @@ import { useSessionContext, useSessionDispatch } from '../../orchestration/Sessi
 import { completeStage, getNextStage } from '../../api/sessions';
 import { STAGE_ROUTES, Stage } from '../../orchestration/stages';
 import { apiClient } from '../../api/client';
-import { requestFeedback, acknowledgeFeedback } from '../../api/feedback';
+import { requestFeedback, acknowledgeFeedback, HintStatus } from '../../api/feedback';
 import { SCENARIOS } from './perspectiveData';
 import { DirectionOption } from './types';
 import './perspective.css';
@@ -35,6 +35,7 @@ export function PerspectiveTask() {
   const [hintPolicy, setHintPolicy] = useState({ unlockAfter: 1, maxHints: 1 });
   const [wrongTries, setWrongTries] = useState<Record<string, number>>({});
   const [lastWrong, setLastWrong] = useState<Record<string, DirectionOption>>({});
+  const [solved, setSolved] = useState<Record<string, boolean>>({});
   const [hints, setHints] = useState<Record<string, string>>({});
   const [hintsUsed, setHintsUsed] = useState<Record<string, number>>({});
   const [firstAnswers, setFirstAnswers] = useState<Record<string, DirectionOption>>({});
@@ -144,7 +145,6 @@ export function PerspectiveTask() {
       const res = await requestFeedback(sessionId, {
         task_type: 'spatial_perspective_taking',
         item_id: stimulusId,
-        attempt: triesHere,
         context: { stimulus_id: stimulusId, answer: selectedAnswer, question: currentQuestion.text },
       });
       if (res.shown && res.message) {
@@ -160,20 +160,37 @@ export function PerspectiveTask() {
   };
 
   const handleNext = async () => {
-    if (hintsEnabled && selectedAnswer && selectedAnswer !== currentQuestion.correctAnswer
+    let correct = selectedAnswer === currentQuestion.correctAnswer;
+    if (hintsEnabled && sessionId && selectedAnswer && !solved[questionKey]
         && lastWrong[questionKey] !== selectedAnswer) {
-      // A new wrong answer: count it and let them try again. Pressing Next
-      // again without changing it moves on, so nobody gets stuck.
-      setWrongTries(prev => ({ ...prev, [questionKey]: (prev[questionKey] ?? 0) + 1 }));
-      setLastWrong(prev => ({ ...prev, [questionKey]: selectedAnswer }));
+      // The server checks each new answer and counts wrong tries for the hint
+      // button. Pressing Next again without changing a wrong answer moves on,
+      // so nobody gets stuck.
+      if (checkingAnswer) return;
+      setCheckingAnswer(true);
+      try {
+        const res = await apiClient.post<{ correct: boolean; hint: HintStatus }>(
+          `/sessions/${sessionId}/perspective/answer`, { stimulus_id: stimulusId, answer: selectedAnswer });
+        correct = res.data.correct;
+        setWrongTries(prev => ({ ...prev, [questionKey]: res.data.hint.failed_tries }));
+        setHintsUsed(prev => ({ ...prev, [questionKey]: res.data.hint.hints_used }));
+      } catch (err) {
+        console.warn('Answer not checked on the server:', err);
+      } finally {
+        setCheckingAnswer(false);
+      }
       setFirstAnswers(prev => (questionKey in prev ? prev : { ...prev, [questionKey]: selectedAnswer }));
-      return;
+      if (!correct) {
+        setLastWrong(prev => ({ ...prev, [questionKey]: selectedAnswer }));
+        return;
+      }
+      setSolved(prev => ({ ...prev, [questionKey]: true }));
     }
 
     const feedbackId = pendingFeedback.current[questionKey];
     if (feedbackId && sessionId) {
       delete pendingFeedback.current[questionKey];
-      acknowledgeFeedback(sessionId, feedbackId, selectedAnswer === currentQuestion.correctAnswer)
+      acknowledgeFeedback(sessionId, feedbackId, correct)
         .catch(err => console.warn('Hint outcome not recorded:', err));
     }
 

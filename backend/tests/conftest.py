@@ -28,6 +28,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app.core.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
+from app.services import session_report  # noqa: E402
 from app import models as _models  # noqa: E402,F401  (registers every table on Base.metadata)
 
 
@@ -52,6 +53,7 @@ async def sqlite_db():
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    session_report.SESSION_FACTORY = maker   # background session reports
     yield
     app.dependency_overrides.pop(get_db, None)
     await engine.dispose()

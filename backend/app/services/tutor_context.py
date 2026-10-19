@@ -2,7 +2,7 @@
 
 Gemini keeps no state between requests, so every hint request carries a
 short history of the session so far. It is rebuilt from what the server
-already records (its own LEGO checks and every hint with its outcome), so
+already records (its own LEGO checks, park answers and every hint with its outcome), so
 there is no second copy to drift out of sync. Names and codes never appear.
 """
 import json
@@ -10,6 +10,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.answer_attempt import AnswerAttempt
 from app.models.feedback_event import FeedbackEvent
 from app.models.lego_event import LegoEvent
 from app.models.task_instance import TaskInstance
@@ -54,18 +55,22 @@ def _lego_lines(checks: list[LegoEvent], hints: list[FeedbackEvent]) -> list[tup
     return lines
 
 
-def _park_lines(hints: list[FeedbackEvent]) -> list[tuple]:
+def _park_lines(attempts: list[AnswerAttempt], hints: list[FeedbackEvent]) -> list[tuple]:
+    by_question: dict[str, list[AnswerAttempt]] = {}
+    for a in attempts:
+        by_question.setdefault(a.item_id, []).append(a)
     lines = []
-    for h in hints:
-        context = json.loads(h.trigger_reason or "{}")
-        tries = context.get("failed_tries")
-        text = f"Park {h.item_id}: {tries} wrong answer(s) before asking; hint \"{h.message}\", {_outcome(h)}"
-        lines.append((h.shown_at, text))
+    for item_id, tries in by_question.items():
+        text = f"Park {item_id}: answered " + ", ".join(a.answer for a in tries)
+        for h in (h for h in hints if h.item_id == item_id):
+            text += f'; hint "{h.message}", {_outcome(h)}'
+        text += "; correct" if tries[-1].is_correct else "; not correct yet"
+        lines.append((tries[0].created_at, text))
     return lines
 
 
-async def session_history(session_id: str, db: AsyncSession) -> list[str]:
-    """Oldest first, at most MAX_LINES, e.g.
+async def session_history(session_id: str, db: AsyncSession, limit: int = MAX_LINES) -> list[str]:
+    """Oldest first, at most `limit` lines, e.g.
     'LEGO tut-01: 2 failed check(s) (height wrong); hint "...", then fixed it; solved'."""
     instances = dict((await db.execute(
         select(TaskInstance.id, TaskInstance.task_type).where(TaskInstance.session_id == session_id)
@@ -82,7 +87,12 @@ async def session_history(session_id: str, db: AsyncSession) -> list[str]:
         .where(FeedbackEvent.session_id == session_id)
         .order_by(FeedbackEvent.shown_at)
     )).scalars().all()
+    attempts = (await db.execute(
+        select(AnswerAttempt)
+        .where(AnswerAttempt.task_instance_id.in_(instances))
+        .order_by(AnswerAttempt.created_at, AnswerAttempt.attempt_number)
+    )).scalars().all()
     lego_hints = [h for h in hints if instances.get(h.task_instance_id) == "lego"]
     park_hints = [h for h in hints if instances.get(h.task_instance_id) == "spatial_perspective_taking"]
-    lines = sorted(_lego_lines(checks, lego_hints) + _park_lines(park_hints), key=lambda t: t[0])
-    return [text for _, text in lines][-MAX_LINES:]
+    lines = sorted(_lego_lines(checks, lego_hints) + _park_lines(attempts, park_hints), key=lambda t: t[0])
+    return [text for _, text in lines][-limit:]

@@ -15,10 +15,14 @@ from app.services.feedback_rules import (
     perspective_feedback,
 )
 from app.services.ai_feedback import PROMPT_VERSION, phrase_hint
+from app.services.session_report import earlier_summary
 from app.services.tutor_context import session_history
 from app.services.lego_tutor import TUTOR_PROMPT_VERSION, build_context, tutor_hint
 from app.services.lego_engine import get_puzzle
-from app.services.hint_policy import failed_tries, hint_status, hints_used, lego_checks, task_policy
+from app.services.hint_policy import failed_tries, hint_status, hints_used, lego_checks, park_wrong_answers, task_policy
+from app.models.scenario_map import ScenarioMap
+from app.services.park_scenarios import get_question
+from app.services.park_tutor import PARK_PROMPT_VERSION, build_context as build_park_context, tutor_hint as park_tutor_hint
 from app.services.orchestration import get_or_create_active_protocol, session_feedback_stages
 from app.services.task_instances import get_or_create_task_instance
 
@@ -66,7 +70,9 @@ async def request_feedback(
         checks = await lego_checks(task_instance.id, request.item_id, db)
         tries = failed_tries(checks)
     else:
-        checks, tries = [], request.attempt
+        checks = []
+        wrong_answers = await park_wrong_answers(task_instance.id, request.item_id, db)
+        tries = len(wrong_answers)
     status = hint_status(True, tries, used, policy)
     if not status["unlocked"]:
         reason = "limit" if status["hints_left"] == 0 else "locked"
@@ -82,6 +88,9 @@ async def request_feedback(
         return FeedbackOut(shown=False, reason="cooldown", **status)
 
     history = await session_history(session_id, db)
+    earlier = await earlier_summary(session, db)
+    if earlier:
+        history = [f"Last session: {earlier}"] + history
     tutor_details: dict = {}
     if request.task_type == "lego":
         # What's wrong comes from the server's latest check of this puzzle
@@ -109,8 +118,27 @@ async def request_feedback(
         }
     else:
         feedback = perspective_feedback(False)
-        phrased = await phrase_hint(request.task_type, feedback, request.context, None, history)
-        tutor_details = {"prompt_version": PROMPT_VERSION}
+        found = get_question(request.item_id)
+        scene = await db.get(ScenarioMap, found[0]["id"]) if found else None
+        if found and scene and scene.status == "approved":
+            earlier = (await db.execute(
+                select(FeedbackEvent.message)
+                .where(FeedbackEvent.task_instance_id == task_instance.id, FeedbackEvent.item_id == request.item_id)
+                .order_by(FeedbackEvent.shown_at)
+            )).scalars().all()
+            context = build_park_context(scene.map_text, found[1], wrong_answers, list(earlier), history)
+            phrased = await park_tutor_hint(context, feedback)
+            tutor_details = {
+                "prompt_version": PARK_PROMPT_VERSION,
+                "strategy": phrased.strategy,
+                "mistake_type": phrased.mistake_type,
+                "answer_relation": context["child_answers"][-1]["relation"] if wrong_answers else None,
+                "tutor_input": context,
+            }
+        else:
+            # No approved scene map yet: reword the rule hint using the question
+            phrased = await phrase_hint(request.task_type, feedback, request.context, None, history)
+            tutor_details = {"prompt_version": PROMPT_VERSION}
 
     event = FeedbackEvent(
         session_id=session_id,

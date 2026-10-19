@@ -4,8 +4,6 @@ export interface FeedbackRequest {
   task_type: 'lego' | 'spatial_perspective_taking';
   /** LEGO puzzle id or park stimulus id (hint limits are per item) */
   item_id: string;
-  /** Park only: wrong answers so far on this question */
-  attempt?: number;
   context?: Record<string, unknown>;
 }
 

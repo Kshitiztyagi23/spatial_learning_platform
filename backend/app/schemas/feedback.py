@@ -7,8 +7,8 @@ class FeedbackRequestIn(BaseModel):
     task_type: Literal["lego", "spatial_perspective_taking"]
     # LEGO puzzle id or park stimulus id: the hint limit is per item
     item_id: str = Field(min_length=1, max_length=80)
-    # Park only: wrong answers so far on this question (LEGO tries are
-    # counted by the server from its own checks)
+    # Ignored: failed tries are counted by the server (LEGO checks, park
+    # answers). Accepted for older clients.
     attempt: int = Field(default=0, ge=0, le=20)
     # Free-form identifiers for analysis (question text, answer, ...)
     context: dict = {}

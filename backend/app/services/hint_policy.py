@@ -6,14 +6,15 @@ enforces both; the browser only mirrors them to grey the button out.
 
   LEGO: failed tries = the server's own non-empty, unsolved checks of the
         puzzle (POST /lego/check), so they can't be inflated by the browser.
-  Park: failed tries = wrong answers to the question, as reported by the
-        task (the answer key moves server-side with the park AI tutor).
+  Park: failed tries = the server's record of wrong answers to the
+        question (POST /perspective/answer checks each one).
 """
 import json
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.answer_attempt import AnswerAttempt
 from app.models.feedback_event import FeedbackEvent
 from app.models.lego_event import LegoEvent
 from app.models.protocol import StudyProtocol
@@ -41,6 +42,17 @@ async def lego_checks(task_instance_id: str, puzzle_id: str, db: AsyncSession) -
         .order_by(LegoEvent.created_at)
     )).scalars().all()
     return [json.loads(r or "{}") for r in rows]
+
+
+async def park_wrong_answers(task_instance_id: str, item_id: str, db: AsyncSession) -> list[str]:
+    """Wrong answers to one park question, oldest first."""
+    return list((await db.execute(
+        select(AnswerAttempt.answer)
+        .where(AnswerAttempt.task_instance_id == task_instance_id,
+               AnswerAttempt.item_id == item_id,
+               AnswerAttempt.is_correct.is_(False))
+        .order_by(AnswerAttempt.attempt_number)
+    )).scalars().all())
 
 
 def failed_tries(checks: list[dict]) -> int:

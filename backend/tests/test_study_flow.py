@@ -146,11 +146,12 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
         "task_type": "spatial_perspective_taking", "trial_number": 1, "stimulus_id": "scenario_1_q_1",
         "response_value": "Left", "correct_response": "Right", "reaction_time_ms": 3100,
     })
-    locked = (await ac.post(f"{base}/feedback", json={
-        "task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1", "attempt": 0})).json()
+    park_hint = {"task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1"}
+    locked = (await ac.post(f"{base}/feedback", json=park_hint)).json()
     assert (locked["shown"], locked["reason"]) == (False, "locked")
-    fb = (await ac.post(f"{base}/feedback", json={
-        "task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1", "attempt": 1})).json()
+    wrong = (await ac.post(f"{base}/perspective/answer", json={"stimulus_id": "scenario_1_q_1", "answer": "Left"})).json()
+    assert (wrong["correct"], wrong["attempt_number"], wrong["hint"]["unlocked"]) == (False, 1, True)
+    fb = (await ac.post(f"{base}/feedback", json=park_hint)).json()
     assert fb["shown"] is True and "character" in fb["message"] and fb["hints_left"] == 0
     assert (await ac.post(f"{base}/feedback/{fb['feedback_id']}/acknowledge", json={"corrected": True})).status_code == 200
 
@@ -254,8 +255,11 @@ async def test_no_feedback_group_never_gets_hints(ac, admin):
     assert s2["stages"] == ["spatial_perspective_taking", "lego", "done"] and s2["feedback_stages"] == []
     check = await _fail_lego(ac, s2["id"], "tut-01", times=3)
     assert check["hint"] == {**check["hint"], "enabled": False, "unlocked": False}
+    wrong = (await ac.post(f"/api/v1/sessions/{s2['id']}/perspective/answer",
+                           json={"stimulus_id": "scenario_1_q_1", "answer": "Left"})).json()
+    assert wrong["hint"]["enabled"] is False
     for task in [
-        {"task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1", "attempt": 3},
+        {"task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1"},
         {"task_type": "lego", "item_id": "tut-01"},
     ]:
         res = (await ac.post(f"/api/v1/sessions/{s2['id']}/feedback", json=task)).json()

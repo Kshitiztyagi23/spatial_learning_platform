@@ -123,6 +123,13 @@ export function DataExportsTab() {
         exportType="feedback_events"
         badge="Feedback"
       />
+
+      <ExportCard
+        title="8. Session Reports"
+        description="One row per finished session: the server's facts (scores, tries, hints) as JSON, plus the AI's reading: summary, strengths, difficulties, error patterns, strategies, response to hints, next focus."
+        exportType="session_reports"
+        badge="AI Reports"
+      />
     </div>
   );
 }

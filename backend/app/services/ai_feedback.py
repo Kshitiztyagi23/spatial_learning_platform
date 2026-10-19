@@ -16,6 +16,7 @@ Providers (AI_PROVIDER in backend/.env):
 Privacy: the model only receives the task context listed in `_context_for`,
 never the participant's name, demographics, or the correct answer.
 """
+import base64
 import json
 import logging
 import re
@@ -149,6 +150,50 @@ async def _openai_compatible(system: str, user: str) -> tuple[str, str]:
 
 
 PROVIDERS = {"anthropic": _anthropic, "openai": _openai_compatible}
+
+
+# ---- one-off calls with images (park scene maps; not used for live hints) ------------
+
+VISION_TIMEOUT_SECONDS = 120
+
+
+async def _anthropic_vision(system: str, user: str, images: list[tuple[str, bytes]]) -> tuple[str, str]:
+    client = anthropic.AsyncAnthropic(api_key=settings.ai_api_key, timeout=VISION_TIMEOUT_SECONDS)
+    content = [
+        {"type": "image", "source": {"type": "base64", "media_type": mime, "data": base64.b64encode(data).decode()}}
+        for mime, data in images
+    ] + [{"type": "text", "text": user}]
+    try:
+        response = await client.messages.create(
+            model=active_model(), max_tokens=4096, system=system,
+            messages=[{"role": "user", "content": content}],
+        )
+    except anthropic.APIError as e:
+        raise AIUnavailable(str(e)) from e
+    if response.stop_reason == "refusal":
+        raise AIUnavailable("declined")
+    return "".join(b.text for b in response.content if b.type == "text"), response.model
+
+
+async def _openai_vision(system: str, user: str, images: list[tuple[str, bytes]]) -> tuple[str, str]:
+    base_url = (settings.ai_base_url or DEFAULT_OPENAI_BASE_URL).rstrip("/")
+    headers = {"Authorization": f"Bearer {settings.ai_api_key}"} if settings.ai_api_key else {}
+    content = [{"type": "text", "text": user}] + [
+        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode()}"}}
+        for mime, data in images
+    ]
+    body = {"model": active_model(), "messages": [{"role": "system", "content": system}, {"role": "user", "content": content}]}
+    try:
+        async with httpx.AsyncClient(timeout=VISION_TIMEOUT_SECONDS) as client:
+            res = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
+            res.raise_for_status()
+            data = res.json()
+        return data["choices"][0]["message"]["content"] or "", data.get("model") or active_model()
+    except (httpx.HTTPError, KeyError, IndexError, TypeError) as e:
+        raise AIUnavailable(f"{type(e).__name__}: {e}") from e
+
+
+VISION_PROVIDERS = {"anthropic": _anthropic_vision, "openai": _openai_vision}
 
 
 # ---- hint phrasing --------------------------------------------------------------

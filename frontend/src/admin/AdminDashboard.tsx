@@ -6,6 +6,7 @@ import { AdminPasscodeModal } from './AdminPasscodeModal';
 import { ProtocolConfigTab } from './ProtocolConfigTab';
 import { LiveSessionMonitorTab } from './LiveSessionMonitorTab';
 import { DataExportsTab } from './DataExportsTab';
+import { AiTutorTab } from './AiTutorTab';
 import './admin.css';
 
 export function AdminDashboard() {
@@ -21,7 +22,7 @@ export function AdminDashboard() {
     return () => window.removeEventListener(ADMIN_AUTH_EXPIRED_EVENT, onExpired);
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'protocol' | 'sessions' | 'exports'>('protocol');
+  const [activeTab, setActiveTab] = useState<'protocol' | 'sessions' | 'tutor' | 'exports'>('protocol');
   const [protocol, setProtocol] = useState<ProtocolData | null>(null);
   const [catalogs, setCatalogs] = useState<CatalogsData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -112,6 +113,13 @@ export function AdminDashboard() {
         </button>
         <button
           type="button"
+          className={`admin-tab-btn ${activeTab === 'tutor' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tutor')}
+        >
+          🤖 AI Tutor
+        </button>
+        <button
+          type="button"
           className={`admin-tab-btn ${activeTab === 'exports' ? 'active' : ''}`}
           onClick={() => setActiveTab('exports')}
         >
@@ -143,6 +151,10 @@ export function AdminDashboard() {
 
         {!loading && activeTab === 'sessions' && (
           <LiveSessionMonitorTab />
+        )}
+
+        {!loading && activeTab === 'tutor' && (
+          <AiTutorTab />
         )}
 
         {!loading && activeTab === 'exports' && (
