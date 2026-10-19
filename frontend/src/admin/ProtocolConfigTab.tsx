@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProtocolData, CatalogsData, ConditionSplit, getRecommendedSchedule, updateProtocol } from '../api/admin';
+import { ProtocolData, CatalogsData, ConditionSplit, HintPolicy, getRecommendedSchedule, updateProtocol } from '../api/admin';
 import { ScheduleEditor, resizeSchedule } from './ScheduleEditor';
 import { GroupAssignmentPanel } from './GroupAssignmentPanel';
 import { Button } from '../shared/Button';
@@ -8,6 +8,30 @@ interface Props {
   protocol: ProtocolData;
   catalogs: CatalogsData;
   onProtocolUpdated: (updated: ProtocolData) => void;
+}
+
+/** Hint button rules for one task (applies where the session schedule turns hints on). */
+function HintPolicyFields({ value, tries, onChange }: { value: HintPolicy; tries: string; onChange: (v: HintPolicy) => void }) {
+  const field = (key: keyof HintPolicy, label: string, max: number) => (
+    <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      {label}
+      <input
+        type="number"
+        min={0}
+        max={max}
+        value={value[key]}
+        onChange={(e) => onChange({ ...value, [key]: Math.max(0, Math.min(max, Number(e.target.value) || 0)) })}
+        style={{ width: '4.5rem', padding: '0.35rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+      />
+    </label>
+  );
+  return (
+    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: '0.5rem' }}>
+      <b style={{ fontSize: '0.9rem' }}>🤖 "Need a hint?" button</b>
+      {field('hint_unlock_after', `Unlocks after ${tries}`, 10)}
+      {field('max_hints', 'Max hints each', 10)}
+    </div>
+  );
 }
 
 const GROUPS: { id: keyof ConditionSplit; label: string; description: string }[] = [
@@ -439,6 +463,11 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
             );
           })}
         </div>
+        <HintPolicyFields
+          value={formData.perspective_config}
+          tries="wrong answers"
+          onChange={(v) => setFormData(prev => ({ ...prev, perspective_config: { ...prev.perspective_config, ...v } }))}
+        />
       </div>
 
       {/* 5. 3D LEGO Puzzle Pool */}
@@ -499,6 +528,11 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
           );
         })}
 
+        <HintPolicyFields
+          value={formData.lego_config}
+          tries="failed checks"
+          onChange={(v) => setFormData(prev => ({ ...prev, lego_config: { ...prev.lego_config, ...v } }))}
+        />
       </div>
 
       {/* Save Button */}

@@ -18,6 +18,7 @@ from app.services.session_flow import start_round
 from app.services.study_design import Schedule, has_more_rounds, order_stages, round_plan, round_type
 import json
 from app.models.protocol import ALL_LEGO_PUZZLE_IDS, normalize_puzzle_ids
+from app.services.hint_policy import task_policy
 from app.services.window_test import DEFAULT_WINDOW_CONFIG, WINDOW_QUESTION_IDS
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -133,7 +134,8 @@ async def get_task_config_endpoint(
             "task_type": "spatial_perspective_taking",
             "condition": session.condition,
             "ai_hints_enabled": "spatial_perspective_taking" in hint_stages,
-            "selected_scenarios": persp_cfg.get("selected_scenarios", list(range(1, 9)))
+            "selected_scenarios": persp_cfg.get("selected_scenarios", list(range(1, 9))),
+            **task_policy(protocol, "spatial_perspective_taking")
         }
     elif task_type == "lego":
         lego_cfg = json.loads(protocol.lego_config_json)
@@ -141,6 +143,7 @@ async def get_task_config_endpoint(
             "task_type": "lego",
             "condition": session.condition,
             "ai_hints_enabled": "lego" in hint_stages,
+            **task_policy(protocol, "lego"),
             "selected_puzzles": normalize_puzzle_ids(lego_cfg.get("selected_puzzles", ALL_LEGO_PUZZLE_IDS)),
             "time_limit_seconds": lego_cfg.get("time_limit_seconds", 600)
         }

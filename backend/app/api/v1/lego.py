@@ -9,7 +9,9 @@ from app.models.lego_event import LegoEvent
 from app.models.lego_submission import LegoSubmission
 from app.models.protocol import normalize_puzzle_ids
 from app.services.lego_engine import check, get_puzzle, load_puzzles
-from app.services.orchestration import get_or_create_active_protocol
+from app.models.session import Session
+from app.services.hint_policy import failed_tries, hint_status, hints_used, lego_checks, task_policy
+from app.services.orchestration import get_or_create_active_protocol, session_feedback_stages
 from app.services.task_instances import get_or_create_task_instance
 from app.schemas.lego import LegoCheckIn, LegoEventIn, LegoSubmitIn, LegoSubmitOut
 
@@ -68,7 +70,14 @@ async def check_build(session_id: str, payload: LegoCheckIn, db: AsyncSession = 
         details_json=json.dumps({**result, "placed": placed}),
     ))
     await db.commit()
-    return result
+
+    # State of the "Need a hint?" button after this check
+    session = await db.get(Session, session_id)
+    enabled = bool(session) and "lego" in session_feedback_stages(session)
+    tries = failed_tries(await lego_checks(task_instance.id, payload.puzzle_id, db))
+    used = await hints_used(task_instance.id, payload.puzzle_id, db)
+    policy = task_policy(await get_or_create_active_protocol(db), "lego")
+    return {**result, "hint": hint_status(enabled, tries, used, policy)}
 
 
 def score_lego_results(results: list[dict], puzzle_count: int) -> tuple[float | None, float | None]:

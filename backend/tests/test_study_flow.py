@@ -96,6 +96,15 @@ async def _assign(ac, admin):
     return res.json()
 
 
+async def _fail_lego(ac, session_id, puzzle_id="tut-01", times=1):
+    """Wrong checks of a puzzle (the solution minus its last brick)."""
+    from app.services.lego_engine import get_puzzle
+    wrong = get_puzzle(puzzle_id)["solution"][:-1]
+    for _ in range(times):
+        res = await ac.post(f"/api/v1/sessions/{session_id}/lego/check", json={"puzzle_id": puzzle_id, "placed": wrong})
+    return res.json()
+
+
 def _rows(text: str) -> list[dict]:
     return list(csv.DictReader(io.StringIO(text)))
 
@@ -137,8 +146,12 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
         "task_type": "spatial_perspective_taking", "trial_number": 1, "stimulus_id": "scenario_1_q_1",
         "response_value": "Left", "correct_response": "Right", "reaction_time_ms": 3100,
     })
-    fb = (await ac.post(f"{base}/feedback", json={"task_type": "spatial_perspective_taking", "correct": False})).json()
-    assert fb["shown"] is True and "character" in fb["message"]
+    locked = (await ac.post(f"{base}/feedback", json={
+        "task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1", "attempt": 0})).json()
+    assert (locked["shown"], locked["reason"]) == (False, "locked")
+    fb = (await ac.post(f"{base}/feedback", json={
+        "task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1", "attempt": 1})).json()
+    assert fb["shown"] is True and "character" in fb["message"] and fb["hints_left"] == 0
     assert (await ac.post(f"{base}/feedback/{fb['feedback_id']}/acknowledge", json={"corrected": True})).status_code == 200
 
     lego_cfg = (await ac.get(f"{base}/task-config/lego")).json()
@@ -147,16 +160,20 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
         "event_type": "place", "puzzle_id": "tut-01", "block_id": "b1",
         "block_type": "2x2-red", "position_json": "[0,0,0]", "rotation_json": "0",
     })
-    diagnoses = [{"code": "height-wrong"}, {"code": "region-mismatch", "view": "front", "area": "right"}]
-    fb = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "attempt": 1, "diagnoses": diagnoses})).json()
-    assert fb["message"] == "Look at the side view. Count the layers."
-    again = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "attempt": 2, "diagnoses": diagnoses})).json()
-    assert again["shown"] is False  # inside the cooldown window
-    # The server checks builds itself: tut-01 wrong once then solved, easy-01 wrong
+    # "Need a hint?" unlocks after 2 failed server checks of the puzzle
     from app.services.lego_engine import get_puzzle
     tut = get_puzzle("tut-01")["solution"]
-    wrong = (await ac.post(f"{base}/lego/check", json={"puzzle_id": "tut-01", "placed": tut[:-1]})).json()
+    wrong = await _fail_lego(ac, s2["id"], "tut-01")
     assert wrong["outcome"] == "views-mismatch" and wrong["diagnoses"]
+    assert (wrong["hint"]["unlocked"], wrong["hint"]["failed_tries"]) == (False, 1)
+    early = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert (early["shown"], early["reason"]) == (False, "locked")
+    wrong = await _fail_lego(ac, s2["id"], "tut-01")
+    assert wrong["hint"]["unlocked"] is True and wrong["hint"]["hints_left"] == 3
+    fb = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert fb["shown"] is True and fb["message"] and fb["hints_left"] == 2
+    again = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert (again["shown"], again["reason"]) == (False, "cooldown")
     solved = (await ac.post(f"{base}/lego/check", json={"puzzle_id": "tut-01", "placed": tut})).json()
     assert solved["outcome"] == "solved"
     await ac.post(f"{base}/lego/check", json={"puzzle_id": "easy-01", "placed": get_puzzle("easy-01")["solution"][:1]})
@@ -168,8 +185,8 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
         "final_build_json": "{}", "duration_seconds": 95, "puzzle_count": 99,
         "results": [{"puzzle_id": "easy-01", "solved": True, "checks": 1, "placements": 1}],  # ignored
     })).json()
-    # 1 of 2 offered puzzles solved; 1 solve over 3 non-empty checks
-    assert sub["accuracy"] == 0.5 and sub["efficiency_score"] == pytest.approx(1 / 3)
+    # 1 of 2 offered puzzles solved; 1 solve over 4 non-empty checks
+    assert sub["accuracy"] == 0.5 and sub["efficiency_score"] == pytest.approx(1 / 4)
     await _finish(ac, s2["id"])
 
     # Session 3: post-test
@@ -196,7 +213,7 @@ async def test_full_study_for_ai_feedback_group_and_exports(ac, admin):
     assert [(r["round_number"], r["response"], r["correct"]) for r in persp] == [("2", "Left", "False")]
     events = await export("lego_events")
     assert [(r["puzzle_id"], r["event_type"], r["is_correct"]) for r in events] == [
-        ("tut-01", "place", ""), ("tut-01", "check", "False"), ("tut-01", "check", "True"),
+        ("tut-01", "place", ""), ("tut-01", "check", "False"), ("tut-01", "check", "False"), ("tut-01", "check", "True"),
         ("easy-01", "check", "False"), ("easy-01", "check", "False"),
     ]
     assert (await export("lego_submissions"))[0]["accuracy"] == "0.5"
@@ -235,12 +252,14 @@ async def test_no_feedback_group_never_gets_hints(ac, admin):
     await _assign(ac, admin)
     s2 = await _start(ac, p["id"])
     assert s2["stages"] == ["spatial_perspective_taking", "lego", "done"] and s2["feedback_stages"] == []
+    check = await _fail_lego(ac, s2["id"], "tut-01", times=3)
+    assert check["hint"] == {**check["hint"], "enabled": False, "unlocked": False}
     for task in [
-        {"task_type": "spatial_perspective_taking", "correct": False},
-        {"task_type": "lego", "attempt": 1, "diagnoses": [{"code": "height-wrong"}]},
+        {"task_type": "spatial_perspective_taking", "item_id": "scenario_1_q_1", "attempt": 3},
+        {"task_type": "lego", "item_id": "tut-01"},
     ]:
         res = (await ac.post(f"/api/v1/sessions/{s2['id']}/feedback", json=task)).json()
-        assert res["shown"] is False
+        assert (res["shown"], res["reason"]) == (False, "not_allowed")
 
 
 @pytest.mark.asyncio
@@ -277,9 +296,8 @@ async def test_admin_schedule_controls_every_session(ac, admin):
     p = await _participant(ac, "Ravi", "9")
     first = await _start(ac, p["id"])
     # Session 1 hints reach a student who has no group yet
-    hint = (await ac.post(f"/api/v1/sessions/{first['id']}/feedback", json={
-        "task_type": "lego", "attempt": 1, "diagnoses": [{"code": "height-wrong"}],
-    })).json()
+    await _fail_lego(ac, first["id"], "tut-01", times=2)
+    hint = (await ac.post(f"/api/v1/sessions/{first['id']}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
     assert hint["shown"] is True
     assert await _finish(ac, first["id"]) == ["demographics", "ptsot", "lego", "done"]
     await _assign(ac, admin)
@@ -468,3 +486,31 @@ async def test_active_session_gates_who_can_start_and_labels_the_data(ac, admin)
         "ptsot_config": {}, "perspective_config": {}, "lego_config": {},
     })
     assert bad.status_code == 422
+
+
+
+@pytest.mark.asyncio
+async def test_hint_unlock_and_limit_follow_admin_settings(ac, admin):
+    await ac.put("/api/v1/admin/protocol", headers=admin, json={
+        "condition_split": GROUP_ONLY["experimental"], "total_rounds": 3,
+        "round_schedule": {"session_1": {"stages": ["demographics", "lego"], "feedback": ["lego"]}},
+        "ptsot_config": {}, "perspective_config": {},
+        "lego_config": {"selected_puzzles": ["tut-01"], "hint_unlock_after": 1, "max_hints": 1},
+    })
+    p = await _participant(ac)
+    s = await _start(ac, p["id"])
+    cfg = (await ac.get(f"/api/v1/sessions/{s['id']}/task-config/lego")).json()
+    assert (cfg["hint_unlock_after"], cfg["max_hints"]) == (1, 1)
+
+    # Locked until the first failed check
+    none = (await ac.post(f"/api/v1/sessions/{s['id']}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert (none["shown"], none["reason"]) == (False, "locked")
+    check = await _fail_lego(ac, s["id"], "tut-01")
+    assert check["hint"]["unlocked"] is True
+    first = (await ac.post(f"/api/v1/sessions/{s['id']}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert first["shown"] is True and first["hints_left"] == 0 and first["unlocked"] is False
+    second = (await ac.post(f"/api/v1/sessions/{s['id']}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert (second["shown"], second["reason"]) == (False, "limit")
+
+    rows = _rows((await ac.get("/api/v1/admin/exports/feedback_events", headers=admin)).text)
+    assert [(r["item_id"], r["requested"]) for r in rows] == [("tut-01", "True")]

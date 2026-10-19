@@ -28,10 +28,15 @@ export function PerspectiveTask() {
   const [reactionTimes, setReactionTimes] = useState<Record<string, number>>({});
   const shownAt = useRef<Record<string, number>>({});
 
-  // Experimental condition: one hint per question after a wrong answer. The
-  // answer given before the hint is what gets recorded as the trial response.
+  // Groups with hints: a wrong answer gets "Not quite" and a retry; after the
+  // admin-set number of wrong tries the "Need a hint?" button unlocks. The
+  // first answer to a question is what gets recorded as the trial response.
   const [hintsEnabled, setHintsEnabled] = useState(false);
+  const [hintPolicy, setHintPolicy] = useState({ unlockAfter: 1, maxHints: 1 });
+  const [wrongTries, setWrongTries] = useState<Record<string, number>>({});
+  const [lastWrong, setLastWrong] = useState<Record<string, DirectionOption>>({});
   const [hints, setHints] = useState<Record<string, string>>({});
+  const [hintsUsed, setHintsUsed] = useState<Record<string, number>>({});
   const [firstAnswers, setFirstAnswers] = useState<Record<string, DirectionOption>>({});
   const pendingFeedback = useRef<Record<string, string>>({});
   const [checkingAnswer, setCheckingAnswer] = useState(false);
@@ -48,6 +53,9 @@ export function PerspectiveTask() {
       .then(res => {
         const cfg = res.data;
         setHintsEnabled(cfg.ai_hints_enabled === true);
+        if (typeof cfg.hint_unlock_after === 'number' && typeof cfg.max_hints === 'number') {
+          setHintPolicy({ unlockAfter: cfg.hint_unlock_after, maxHints: cfg.max_hints });
+        }
         if (cfg.selected_scenarios && Array.isArray(cfg.selected_scenarios)) {
           const filtered = SCENARIOS.filter(s => cfg.selected_scenarios.includes(s.id));
           if (filtered.length > 0) {
@@ -124,33 +132,42 @@ export function PerspectiveTask() {
     }
   };
 
-  const handleNext = async () => {
-    if (hintsEnabled && selectedAnswer && !(questionKey in hints) && sessionId) {
-      const correct = selectedAnswer === currentQuestion.correctAnswer;
-      if (!correct) {
-        setCheckingAnswer(true);
-        try {
-          const res = await requestFeedback(sessionId, {
-            task_type: 'spatial_perspective_taking',
-            correct,
-            context: {
-              stimulus_id: `scenario_${currentScenario.id}_q_${currentQuestion.questionNumber}`,
-              answer: selectedAnswer,
-              question: currentQuestion.text,
-            },
-          });
-          if (res.shown && res.message) {
-            setHints(prev => ({ ...prev, [questionKey]: res.message! }));
-            setFirstAnswers(prev => ({ ...prev, [questionKey]: selectedAnswer }));
-            if (res.feedback_id) pendingFeedback.current[questionKey] = res.feedback_id;
-            return; // Stay on the question so the participant can rethink
-          }
-        } catch (err) {
-          console.warn('Hint request failed:', err);
-        } finally {
-          setCheckingAnswer(false);
-        }
+  const stimulusId = `scenario_${currentScenario.id}_q_${currentQuestion.questionNumber}`;
+  const triesHere = wrongTries[questionKey] ?? 0;
+  const hintUnlocked = hintsEnabled && triesHere >= hintPolicy.unlockAfter
+    && (hintsUsed[questionKey] ?? 0) < hintPolicy.maxHints;
+
+  const handleHint = async () => {
+    if (!sessionId || checkingAnswer) return;
+    setCheckingAnswer(true);
+    try {
+      const res = await requestFeedback(sessionId, {
+        task_type: 'spatial_perspective_taking',
+        item_id: stimulusId,
+        attempt: triesHere,
+        context: { stimulus_id: stimulusId, answer: selectedAnswer, question: currentQuestion.text },
+      });
+      if (res.shown && res.message) {
+        setHints(prev => ({ ...prev, [questionKey]: res.message! }));
+        setHintsUsed(prev => ({ ...prev, [questionKey]: res.hints_used }));
+        if (res.feedback_id) pendingFeedback.current[questionKey] = res.feedback_id;
       }
+    } catch (err) {
+      console.warn('Hint request failed:', err);
+    } finally {
+      setCheckingAnswer(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (hintsEnabled && selectedAnswer && selectedAnswer !== currentQuestion.correctAnswer
+        && lastWrong[questionKey] !== selectedAnswer) {
+      // A new wrong answer: count it and let them try again. Pressing Next
+      // again without changing it moves on, so nobody gets stuck.
+      setWrongTries(prev => ({ ...prev, [questionKey]: (prev[questionKey] ?? 0) + 1 }));
+      setLastWrong(prev => ({ ...prev, [questionKey]: selectedAnswer }));
+      setFirstAnswers(prev => (questionKey in prev ? prev : { ...prev, [questionKey]: selectedAnswer }));
+      return;
     }
 
     const feedbackId = pendingFeedback.current[questionKey];
@@ -478,10 +495,29 @@ export function PerspectiveTask() {
             })}
           </div>
 
-          {hints[questionKey] && (
-            <div className="perspective-hint" role="status" aria-live="polite">
-              {hints[questionKey]} You can change your answer, then press Next.
+          {hintsEnabled && triesHere > 0 && lastWrong[questionKey] === selectedAnswer && (
+            <div className="perspective-retry" role="status" aria-live="polite">
+              Not quite. Try a different answer, or press Next to move on.
             </div>
+          )}
+          {hints[questionKey] && (
+            <div className="perspective-hint" role="status" aria-live="polite">{hints[questionKey]}</div>
+          )}
+          {hintsEnabled && triesHere > 0 && (
+            <button
+              type="button"
+              className="perspective-hint-button"
+              onClick={handleHint}
+              disabled={!hintUnlocked || checkingAnswer}
+            >
+              {checkingAnswer
+                ? 'Thinking…'
+                : hintUnlocked
+                  ? 'Need a hint?'
+                  : (hintsUsed[questionKey] ?? 0) >= hintPolicy.maxHints
+                    ? 'No hints left for this question'
+                    : `Hint unlocks after ${hintPolicy.unlockAfter} tries (${triesHere}/${hintPolicy.unlockAfter})`}
+            </button>
           )}
 
           {/* Question Quick Jump Pills */}

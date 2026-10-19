@@ -13,11 +13,17 @@ export interface WindowConfig {
   shuffle: boolean;
 }
 
-export interface PerspectiveConfig {
+/** "Need a hint?" unlocks after this many failed tries; at most max_hints per item */
+export interface HintPolicy {
+  hint_unlock_after: number;
+  max_hints: number;
+}
+
+export interface PerspectiveConfig extends HintPolicy {
   selected_scenarios: number[];
 }
 
-export interface LegoConfig {
+export interface LegoConfig extends HintPolicy {
   selected_puzzles: string[];
   time_limit_seconds: number;
   ai_hints_enabled: boolean;

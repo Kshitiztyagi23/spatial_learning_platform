@@ -20,6 +20,30 @@ import { apiClient } from '../../api/client';
 import { startLegoTelemetry } from './telemetry';
 import type { Placement } from './core/types';
 import { useLegoHints } from './hints';
+import type { HintStatus } from '../../api/feedback';
+
+function HintButton({ status, loading, onClick }: { status: HintStatus | null; loading: boolean; onClick: () => void }) {
+  let label = 'Need a hint?';
+  if (status && !status.unlocked) {
+    label = status.hints_left === 0
+      ? 'No hints left for this puzzle'
+      : `Hint unlocks after ${status.unlock_after} tries (${status.failed_tries}/${status.unlock_after})`;
+  } else if (!status) {
+    label = 'Hint unlocks after a few tries';
+  }
+  return (
+    <button
+      type="button"
+      className="board-hint-button"
+      onClick={onClick}
+      disabled={!status?.unlocked || loading}
+      aria-live="polite"
+    >
+      {loading ? 'Thinking…' : label}
+      {status?.unlocked && !loading && status.hints_left > 0 && <span className="board-hint-left"> ({status.hints_left} left)</span>}
+    </button>
+  );
+}
 
 function formatClock(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -37,7 +61,9 @@ export function LegoTask() {
   const [hintsEnabled, setHintsEnabled] = useState(false);
   const [timeLimit, setTimeLimit] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const hint = useLegoHints(sessionId, hintsEnabled);
+  const hints = useLegoHints(sessionId, hintsEnabled);
+  const onCheckResult = useRef(hints.onCheckResult);
+  onCheckResult.current = hints.onCheckResult;
 
   // Restrict the puzzle set to what the active study protocol selects, then
   // start logging build actions (logging failures never interrupt the child)
@@ -53,7 +79,9 @@ export function LegoTask() {
       apiClient.post(`/sessions/${sessionId}/lego/check`, {
         puzzle_id: puzzleId,
         placed: placed.map(({ typeId, rotation, origin }) => ({ typeId, rotation, origin })),
-      }).catch(err => console.warn('LEGO check not recorded:', err));
+      })
+        .then(res => res.data?.hint && onCheckResult.current(puzzleId, res.data.hint))
+        .catch(err => console.warn('LEGO check not recorded:', err));
     };
     apiClient.get(`/sessions/${sessionId}/task-config/lego`)
       .then(res => {
@@ -208,7 +236,8 @@ export function LegoTask() {
           <section className="app-board-region" aria-label="3D board stage">
             <Stage />
             <Feedback />
-            {hint && <div className="board-hint" role="status" aria-live="polite">{hint}</div>}
+            {hints.hint && <div className="board-hint" role="status" aria-live="polite">{hints.hint}</div>}
+            {hintsEnabled && <HintButton status={hints.status} loading={hints.loading} onClick={hints.requestHint} />}
           </section>
           <aside className="app-views-region" aria-label="Orthographic views">
             <ViewsRow />

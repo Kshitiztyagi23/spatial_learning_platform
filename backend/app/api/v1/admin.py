@@ -422,7 +422,7 @@ async def export_data(export_type: str, db: AsyncSession = Depends(get_db)):
 
     elif export_type == "feedback_events":
         writer.writerow(["feedback_id"] + ctx_cols + [
-            "task_type", "feedback_type", "generated_by", "message",
+            "task_type", "item_id", "requested", "feedback_type", "generated_by", "message",
             "trigger_reason", "corrected_after", "rule_version", "shown_at"
         ])
         stmt = (
@@ -434,7 +434,8 @@ async def export_data(export_type: str, db: AsyncSession = Depends(get_db)):
         result = await db.execute(stmt)
         for fb, sess, task_type in result.all():
             writer.writerow([fb.id] + ctx(sess) + [
-                task_type or "", fb.feedback_type, fb.generated_by or "rule", fb.message,
+                task_type or "", fb.item_id or "", "" if fb.requested is None else fb.requested,
+                fb.feedback_type, fb.generated_by or "rule", fb.message,
                 fb.trigger_reason or "", "" if fb.accepted is None else fb.accepted,
                 fb.rule_version, fb.shown_at.isoformat() if fb.shown_at else ""
             ])

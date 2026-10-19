@@ -1,83 +1,80 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from './state/session';
-import { requestFeedback, acknowledgeFeedback } from '../../api/feedback';
-import type { BoardSize, Diagnosis, ViewName } from './core/types';
+import { requestFeedback, acknowledgeFeedback, type HintStatus } from '../../api/feedback';
 
-const VIEW_COLUMNS: Record<ViewName, keyof BoardSize> = { front: 'width', right: 'depth', top: 'width' };
-
-/** Which horizontal third of the view card a mismatch sits in, or nothing
- *  when it spans most of the card (then "look at the left" would mislead). */
-function areaOf(d: Diagnosis, board: BoardSize): string | undefined {
-  if (!d.view || !d.region) return undefined;
-  const cols = board[VIEW_COLUMNS[d.view]];
-  if (cols <= 1) return undefined;
-  const { colFrom, colTo } = d.region;
-  if (colTo - colFrom + 1 > (cols * 2) / 3) return undefined;
-  const centre = (colFrom + colTo) / 2 / (cols - 1);
-  return centre < 1 / 3 ? 'left' : centre > 2 / 3 ? 'right' : 'middle';
+export interface LegoHints {
+  hint: string | null;
+  /** Button state for the current puzzle (null until the first server check) */
+  status: HintStatus | null;
+  loading: boolean;
+  /** Feed each POST /lego/check response in, to update the button */
+  onCheckResult: (puzzleId: string, status: HintStatus) => void;
+  requestHint: () => void;
 }
 
 /**
- * Hint ladder for the experimental condition: each failed Check on a puzzle
- * asks the server for the next, more specific hint. When the participant
- * later solves the puzzle (or leaves it), the last hint is acknowledged so the
- * data shows whether hints led to corrections.
+ * "Need a hint?" for LEGO. The server counts failed checks of the puzzle and
+ * unlocks the button after the admin-set number; each press asks for one
+ * hint, more specific each time, up to the limit. When the student then
+ * solves the puzzle (or leaves it) the last hint is acknowledged, so the data
+ * shows whether hints led to corrections.
  */
-export function useLegoHints(sessionId: string | null, enabled: boolean): string | null {
+export function useLegoHints(sessionId: string | null, enabled: boolean): LegoHints {
   const [hint, setHint] = useState<string | null>(null);
+  const [status, setStatus] = useState<HintStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const pendingFeedbackId = useRef<string | null>(null);
+  const puzzleRef = useRef(useSession.getState().derived.puzzle.id);
+
+  const settle = useCallback((corrected: boolean) => {
+    if (!sessionId || !pendingFeedbackId.current) return;
+    acknowledgeFeedback(sessionId, pendingFeedbackId.current, corrected)
+      .catch(err => console.warn('Hint outcome not recorded:', err));
+    pendingFeedbackId.current = null;
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId || !enabled) return;
-    let failedChecks = 0;
-    let pendingFeedbackId: string | null = null;
-
-    const settle = (corrected: boolean) => {
-      if (!pendingFeedbackId) return;
-      acknowledgeFeedback(sessionId, pendingFeedbackId, corrected)
-        .catch(err => console.warn('Hint outcome not recorded:', err));
-      pendingFeedbackId = null;
-    };
-
     const unsubscribe = useSession.subscribe((state, prev) => {
       if (state.derived !== prev.derived) {
         settle(false);
-        failedChecks = 0;
+        puzzleRef.current = state.derived.puzzle.id;
         setHint(null);
-        return;
-      }
-      if (!state.lastCheck || state.lastCheck === prev.lastCheck) return;
-
-      const { outcome, diagnoses } = state.lastCheck;
-      if (outcome === 'solved') {
+        setStatus(null);
+      } else if (state.lastCheck?.outcome === 'solved' && state.lastCheck !== prev.lastCheck) {
         settle(true);
         setHint(null);
-        return;
       }
-      if (outcome === 'empty') return;
-
-      failedChecks += 1;
-      const board = state.derived.puzzle.board;
-      requestFeedback(sessionId, {
-        task_type: 'lego',
-        attempt: failedChecks,
-        diagnoses: diagnoses.map(d => ({ code: d.code, view: d.view, area: areaOf(d, board) })),
-        context: { puzzle_id: state.derived.puzzle.id, attempt: failedChecks },
-      })
-        .then(res => {
-          if (!res.shown || !res.message) return;
-          // A newer hint replaces the old one, which counts as not yet corrected
-          settle(false);
-          pendingFeedbackId = res.feedback_id ?? null;
-          setHint(res.message);
-        })
-        .catch(err => console.warn('Hint request failed:', err));
     });
-
     return () => {
       unsubscribe();
       settle(false);
     };
-  }, [sessionId, enabled]);
+  }, [sessionId, enabled, settle]);
 
-  return hint;
+  const onCheckResult = useCallback((puzzleId: string, next: HintStatus) => {
+    if (puzzleId === puzzleRef.current) setStatus(next);
+  }, []);
+
+  const requestHint = useCallback(() => {
+    if (!sessionId || loading) return;
+    const puzzleId = puzzleRef.current;
+    setLoading(true);
+    requestFeedback(sessionId, { task_type: 'lego', item_id: puzzleId, context: { puzzle_id: puzzleId } })
+      .then(res => {
+        if (puzzleId !== puzzleRef.current) return;
+        setStatus(res);
+        if (res.shown && res.message) {
+          settle(false); // a newer hint replaces the old one: not yet corrected
+          pendingFeedbackId.current = res.feedback_id ?? null;
+          setHint(res.message);
+        } else if (res.reason === 'nothing_to_fix') {
+          setHint('Press Check first, then ask again.');
+        }
+      })
+      .catch(err => console.warn('Hint request failed:', err))
+      .finally(() => setLoading(false));
+  }, [sessionId, loading, settle]);
+
+  return { hint, status: enabled ? status : null, loading, onCheckResult, requestHint };
 }

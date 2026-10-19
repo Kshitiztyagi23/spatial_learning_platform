@@ -2,21 +2,33 @@ import { apiClient } from './client';
 
 export interface FeedbackRequest {
   task_type: 'lego' | 'spatial_perspective_taking';
+  /** LEGO puzzle id or park stimulus id (hint limits are per item) */
+  item_id: string;
+  /** Park only: wrong answers so far on this question */
   attempt?: number;
-  diagnoses?: { code: string; view?: string; area?: string }[];
-  correct?: boolean;
   context?: Record<string, unknown>;
 }
 
-export interface FeedbackResponse {
+/** State of the "Need a hint?" button, as decided by the server. */
+export interface HintStatus {
+  enabled: boolean;
+  unlocked: boolean;
+  failed_tries: number;
+  unlock_after: number;
+  hints_used: number;
+  hints_left: number;
+}
+
+export interface FeedbackResponse extends HintStatus {
   shown: boolean;
   feedback_id?: string;
   feedback_type?: string;
   message?: string;
+  /** Why no hint: not_allowed | locked | limit | cooldown | nothing_to_fix */
+  reason?: string;
 }
 
-/** Ask the server for a hint. It decides by condition, rule and cooldown,
- *  so callers just show `message` when `shown` is true. */
+/** The student pressed "Need a hint?". The server checks every rule. */
 export async function requestFeedback(sessionId: string, req: FeedbackRequest): Promise<FeedbackResponse> {
   const res = await apiClient.post<FeedbackResponse>(`/sessions/${sessionId}/feedback`, req);
   return res.data;

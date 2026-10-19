@@ -30,6 +30,9 @@ class WindowConfig(BaseModel):
 
 class PerspectiveConfig(BaseModel):
     selected_scenarios: List[int] = Field(default_factory=lambda: list(range(1, 9)))
+    # "Need a hint?" unlocks after this many wrong answers to a question
+    hint_unlock_after: int = Field(default=1, ge=0, le=3)
+    max_hints: int = Field(default=1, ge=0, le=5)
 
 class RoundPlan(BaseModel):
     stages: List[str] = []
@@ -45,6 +48,9 @@ class LegoConfig(BaseModel):
     selected_puzzles: List[str] = Field(default_factory=lambda: list(ALL_LEGO_PUZZLE_IDS))
     time_limit_seconds: int = 600
     ai_hints_enabled: bool = True
+    # "Need a hint?" unlocks after this many failed checks of a puzzle
+    hint_unlock_after: int = Field(default=2, ge=0, le=10)
+    max_hints: int = Field(default=3, ge=0, le=10)
 
     @field_validator("selected_puzzles")
     @classmethod
