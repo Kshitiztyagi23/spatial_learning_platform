@@ -527,7 +527,8 @@ async def test_ai_tutor_gets_the_session_history(ac, admin, monkeypatch):
 
     async def fake_ai(system, user):
         sent.append(_json.loads(user))
-        return "Look closely at the side view this time.", "fake-model"
+        return _json.dumps({"hint": "Look closely at the side view this time.",
+                            "focus_view": "side", "strategy": "compare heights"}), "fake-model"
 
     monkeypatch.setattr(settings, "ai_feedback_enabled", True)
     monkeypatch.setattr(settings, "ai_provider", "openai")
@@ -564,6 +565,16 @@ async def test_ai_tutor_gets_the_session_history(ac, admin, monkeypatch):
     assert history[1].startswith("LEGO tut-02: 2 failed check(s)") and history[1].endswith("not solved yet")
     assert "Asha" not in _json.dumps(sent) and p["participant_code"] not in _json.dumps(sent)
 
+    # The tutor saw the real build as grids, plus what's left in the tray
+    tutor_input = sent[-1]
+    assert set(tutor_input["target_views"]) == {"front", "side", "top"}
+    assert tutor_input["target_views"] != tutor_input["child_views"]
+    assert tutor_input["failed_checks"] == 2 and tutor_input["bricks_left"]
+
     rows = _rows((await ac.get("/api/v1/admin/exports/feedback_events", headers=admin)).text)
-    assert {_json.loads(r["trigger_reason"])["prompt_version"] for r in rows} == {"v2"}
+    reasons = [_json.loads(r["trigger_reason"]) for r in rows]
+    from app.services.lego_tutor import TUTOR_PROMPT_VERSION
+    assert {r["prompt_version"] for r in reasons} == {TUTOR_PROMPT_VERSION}
+    assert {(r["strategy"], r["focus_view"]) for r in reasons} == {("compare heights", "side")}
+    assert all("target_views" in r["tutor_input"] for r in reasons)
     assert {r["generated_by"] for r in rows} == {"ai"}

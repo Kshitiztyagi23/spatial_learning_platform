@@ -16,6 +16,7 @@ from app.services.feedback_rules import (
 )
 from app.services.ai_feedback import PROMPT_VERSION, phrase_hint
 from app.services.tutor_context import session_history
+from app.services.lego_tutor import TUTOR_PROMPT_VERSION, build_context, tutor_hint
 from app.services.lego_engine import get_puzzle
 from app.services.hint_policy import failed_tries, hint_status, hints_used, lego_checks, task_policy
 from app.services.orchestration import get_or_create_active_protocol, session_feedback_stages
@@ -80,25 +81,36 @@ async def request_feedback(
     if last_shown and datetime.utcnow() - last_shown < timedelta(seconds=COOLDOWN_SECONDS):
         return FeedbackOut(shown=False, reason="cooldown", **status)
 
-    diagnosis = None
+    history = await session_history(session_id, db)
+    tutor_details: dict = {}
     if request.task_type == "lego":
         # What's wrong comes from the server's latest check of this puzzle
         latest = checks[-1] if checks else {}
         if latest.get("outcome") in (None, "solved", "empty"):
             return FeedbackOut(shown=False, reason="nothing_to_fix", **status)
-        board = get_puzzle(request.item_id)["board"]
-        diagnoses = [{**d, "area": _area(d.get("region"), d.get("view"), board)} for d in latest.get("diagnoses", [])]
-        rung = used + 1  # each hint on a puzzle is one step more specific
-        feedback = lego_feedback(rung, diagnoses)
-        if feedback:
-            diagnosis = diagnoses[min(rung, len(diagnoses)) - 1]
+        puzzle = get_puzzle(request.item_id)
+        diagnoses = [{**d, "area": _area(d.get("region"), d.get("view"), puzzle["board"])} for d in latest.get("diagnoses", [])]
+        # Rule ladder hint: the fallback if the AI tutor is unavailable
+        feedback = lego_feedback(used + 1, diagnoses)
+        if not feedback:
+            return FeedbackOut(shown=False, reason="nothing_to_fix", **status)
+        earlier = (await db.execute(
+            select(FeedbackEvent.message)
+            .where(FeedbackEvent.task_instance_id == task_instance.id, FeedbackEvent.item_id == request.item_id)
+            .order_by(FeedbackEvent.shown_at)
+        )).scalars().all()
+        context = build_context(puzzle, {**latest, "diagnoses": diagnoses}, tries, list(earlier), history)
+        phrased = await tutor_hint(context, feedback)
+        tutor_details = {
+            "prompt_version": TUTOR_PROMPT_VERSION,
+            "strategy": phrased.strategy,
+            "focus_view": phrased.focus_view,
+            "tutor_input": context,
+        }
     else:
         feedback = perspective_feedback(False)
-    if not feedback:
-        return FeedbackOut(shown=False, reason="nothing_to_fix", **status)
-
-    history = await session_history(session_id, db)
-    phrased = await phrase_hint(request.task_type, feedback, request.context, diagnosis, history)
+        phrased = await phrase_hint(request.task_type, feedback, request.context, None, history)
+        tutor_details = {"prompt_version": PROMPT_VERSION}
 
     event = FeedbackEvent(
         session_id=session_id,
@@ -111,8 +123,8 @@ async def request_feedback(
             "rule": feedback.trigger_reason,
             "rule_message": feedback.message,
             "model": phrased.model,
-            "prompt_version": PROMPT_VERSION,
             "failed_tries": tries,
+            **tutor_details,
             **request.context,
         }),
         rule_version=RULE_VERSION,
