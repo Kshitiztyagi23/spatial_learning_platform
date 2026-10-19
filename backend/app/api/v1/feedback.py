@@ -14,7 +14,8 @@ from app.services.feedback_rules import (
     lego_feedback,
     perspective_feedback,
 )
-from app.services.ai_feedback import phrase_hint
+from app.services.ai_feedback import PROMPT_VERSION, phrase_hint
+from app.services.tutor_context import session_history
 from app.services.lego_engine import get_puzzle
 from app.services.hint_policy import failed_tries, hint_status, hints_used, lego_checks, task_policy
 from app.services.orchestration import get_or_create_active_protocol, session_feedback_stages
@@ -96,7 +97,8 @@ async def request_feedback(
     if not feedback:
         return FeedbackOut(shown=False, reason="nothing_to_fix", **status)
 
-    phrased = await phrase_hint(request.task_type, feedback, request.context, diagnosis)
+    history = await session_history(session_id, db)
+    phrased = await phrase_hint(request.task_type, feedback, request.context, diagnosis, history)
 
     event = FeedbackEvent(
         session_id=session_id,
@@ -109,6 +111,7 @@ async def request_feedback(
             "rule": feedback.trigger_reason,
             "rule_message": feedback.message,
             "model": phrased.model,
+            "prompt_version": PROMPT_VERSION,
             "failed_tries": tries,
             **request.context,
         }),

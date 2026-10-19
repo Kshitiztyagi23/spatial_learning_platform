@@ -514,3 +514,56 @@ async def test_hint_unlock_and_limit_follow_admin_settings(ac, admin):
 
     rows = _rows((await ac.get("/api/v1/admin/exports/feedback_events", headers=admin)).text)
     assert [(r["item_id"], r["requested"]) for r in rows] == [("tut-01", "True")]
+
+
+@pytest.mark.asyncio
+async def test_ai_tutor_gets_the_session_history(ac, admin, monkeypatch):
+    import json as _json
+    from app.api.v1 import feedback as feedback_api
+    from app.services import ai_feedback
+    from app.services.lego_engine import get_puzzle
+
+    sent = []
+
+    async def fake_ai(system, user):
+        sent.append(_json.loads(user))
+        return "Look closely at the side view this time.", "fake-model"
+
+    monkeypatch.setattr(settings, "ai_feedback_enabled", True)
+    monkeypatch.setattr(settings, "ai_provider", "openai")
+    monkeypatch.setattr(settings, "ai_api_key", "test")
+    monkeypatch.setattr(settings, "ai_model", "fake-model")
+    monkeypatch.setitem(ai_feedback.PROVIDERS, "openai", fake_ai)
+    monkeypatch.setattr(feedback_api, "COOLDOWN_SECONDS", 0)
+
+    await ac.put("/api/v1/admin/protocol", headers=admin, json={
+        "condition_split": GROUP_ONLY["experimental"], "total_rounds": 3,
+        "round_schedule": {"session_1": {"stages": ["demographics", "lego"], "feedback": ["lego"]}},
+        "ptsot_config": {}, "perspective_config": {},
+        "lego_config": {"selected_puzzles": ["tut-01", "tut-02"], "hint_unlock_after": 1, "max_hints": 3},
+    })
+    p = await _participant(ac, "Asha Rao")
+    s = await _start(ac, p["id"])
+    base = f"/api/v1/sessions/{s['id']}"
+
+    # Puzzle 1: fail, ask, fix
+    await _fail_lego(ac, s["id"], "tut-01")
+    first = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "item_id": "tut-01"})).json()
+    assert first["shown"] is True
+    await ac.post(f"{base}/feedback/{first['feedback_id']}/acknowledge", json={"corrected": True})
+    await ac.post(f"{base}/lego/check", json={"puzzle_id": "tut-01", "placed": get_puzzle("tut-01")["solution"]})
+
+    # Puzzle 2: the tutor now knows what happened on puzzle 1
+    await _fail_lego(ac, s["id"], "tut-02", times=2)
+    second = (await ac.post(f"{base}/feedback", json={"task_type": "lego", "item_id": "tut-02"})).json()
+    assert second["shown"] is True and second["message"] == "Look closely at the side view this time."
+
+    history = sent[-1]["session_so_far"]
+    assert history[0].startswith("LEGO tut-01: 1 failed check(s)")
+    assert 'hint "Look closely at the side view this time.", then fixed it; solved' in history[0]
+    assert history[1].startswith("LEGO tut-02: 2 failed check(s)") and history[1].endswith("not solved yet")
+    assert "Asha" not in _json.dumps(sent) and p["participant_code"] not in _json.dumps(sent)
+
+    rows = _rows((await ac.get("/api/v1/admin/exports/feedback_events", headers=admin)).text)
+    assert {_json.loads(r["trigger_reason"])["prompt_version"] for r in rows} == {"v2"}
+    assert {r["generated_by"] for r in rows} == {"ai"}

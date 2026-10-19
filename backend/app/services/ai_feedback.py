@@ -34,9 +34,15 @@ PRAISE_WORDS = {"great", "awesome", "nice", "perfect", "amazing", "excellent", "
 DEFAULT_MODELS = {"anthropic": "claude-opus-5-5"}
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
+# Bump on any change to SYSTEM_PROMPT or what the model is sent; stored with
+# every hint so analyses can tell prompt versions apart.
+PROMPT_VERSION = "v2"
+
 SYSTEM_PROMPT = """You write one hint for a child aged 10 to 14 doing a spatial reasoning activity.
 
 You are given the activity, what the child's answer got wrong (already worked out by the app), and a fixed hint. Rewrite the fixed hint so it is clearer and more concrete for this exact situation, for example by naming the objects or the view involved.
+
+You may also get session_so_far: what this child has done earlier in today's session. Use it. If an earlier hint about the same problem did not help, the fixed hint is only background: do not reuse that idea or its words. Suggest a different way to check instead (for example another view to compare, counting from the bottom up, or looking at one corner at a time). If the same kind of mistake keeps happening, say so gently.
 
 Rules:
 - One sentence, at most 12 words, plain words a 10-year-old reads easily.
@@ -172,12 +178,15 @@ def clean_hint(text: str) -> str | None:
     return sentence
 
 
-async def phrase_hint(task_type: str, feedback: Feedback, request_context: dict, diagnosis: dict | None = None) -> PhrasedHint:
+async def phrase_hint(task_type: str, feedback: Feedback, request_context: dict, diagnosis: dict | None = None,
+                      history: list[str] | None = None) -> PhrasedHint:
     fallback = PhrasedHint(feedback.message, "rule")
     if not ai_status()["enabled"]:
         return fallback
 
     payload = {**_context_for(task_type, request_context, diagnosis), "fixed_hint": feedback.message}
+    if history:
+        payload["session_so_far"] = history
     try:
         text, model = await PROVIDERS[settings.ai_provider](SYSTEM_PROMPT, json.dumps(payload))
     except AIUnavailable as e:
