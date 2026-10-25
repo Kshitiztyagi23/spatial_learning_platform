@@ -21,6 +21,8 @@ export interface HintPolicy {
 
 export interface PerspectiveConfig extends HintPolicy {
   selected_scenarios: number[];
+  /** Ask only the first N questions of each scenario; 0 = all */
+  questions_per_scenario: number;
 }
 
 export interface LegoConfig extends HintPolicy {
@@ -71,6 +73,8 @@ export interface ProtocolData {
   active_round: number | null;
   /** Label stamped on sessions started while set, e.g. "Session 2 - 15 Oct" */
   run_label: string | null;
+  /** Demo mode: every session in one pass; students join this group after session 1 */
+  demo_group: keyof ConditionSplit | null;
   round_schedule: RoundSchedule;
   ai_status?: AiStatus;
   enabled_stages: string[];

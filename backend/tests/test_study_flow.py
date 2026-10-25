@@ -582,3 +582,41 @@ async def test_ai_tutor_gets_the_session_history(ac, admin, monkeypatch):
     assert {(r["strategy"], r["focus_view"]) for r in reasons} == {("compare heights", "side")}
     assert all("target_views" in r["tutor_input"] for r in reasons)
     assert {r["generated_by"] for r in rows} == {"ai"}
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_runs_every_session_in_one_pass(ac, admin):
+    """Demo: session 1 for everyone, then straight into the demo group's
+    sessions with no assignment step; the same schedule as the study."""
+    body = await _set_protocol(ac, admin, GROUP_ONLY["control"])
+    res = await ac.put("/api/v1/admin/protocol", headers=admin, json={
+        **body, "demo_group": "experimental", "active_round": 2,
+        "perspective_config": {"selected_scenarios": [1], "questions_per_scenario": 3},
+    })
+    assert res.status_code == 200 and (res.json()["demo_group"], res.json()["active_round"]) == ("experimental", None)
+    assert (await ac.get("/api/v1/protocol/active")).json()["demo"] is True
+
+    p = await _participant(ac)
+    s1 = await _start(ac, p["id"])
+    assert (s1["round_number"], s1["demo"], s1["more_rounds"]) == (1, True, True)
+    await _finish(ac, s1["id"])
+
+    s2 = await _start(ac, p["id"])   # no waiting for the researcher
+    assert (s2["round_number"], s2["condition"]) == (2, "experimental")
+    assert s2["feedback_stages"] == ["spatial_perspective_taking", "lego"]
+    cfg = (await ac.get(f"/api/v1/sessions/{s2['id']}/task-config/spatial_perspective_taking")).json()
+    assert cfg["questions_per_scenario"] == 3
+    await _finish(ac, s2["id"])
+
+    s3 = await _start(ac, p["id"])
+    assert (s3["round_number"], s3["stages"], s3["more_rounds"]) == (3, POST_TEST, False)
+    await _finish(ac, s3["id"])
+    assert (await _lookup(ac, p["participant_code"]))["status"] == "complete"
+    sessions = (await ac.get("/api/v1/admin/sessions", headers=admin)).json()["sessions"]
+    assert {s["session_label"] for s in sessions} == {"Demo"}
+
+    # Switching demo off: back to the normal study flow
+    await _set_protocol(ac, admin, GROUP_ONLY["control"])
+    q = await _participant(ac, name="Ravi Kumar", roll="8")
+    await _finish(ac, (await _start(ac, q["id"]))["id"])
+    assert (await _lookup(ac, q["participant_code"]))["status"] == "waiting"

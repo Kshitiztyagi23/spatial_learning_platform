@@ -108,3 +108,5 @@ async def test_scene_map_is_drafted_approved_then_briefs_the_tutor(ac, admin, mo
     assert fb["shown"] and fb["message"] == "Stand at the swing and face the monkey bar."
     assert sent[calls]["scene_map"] == MAP + " Checked." and sent[calls]["child_answers"][0]["answer"] == "Front"
     assert sent[calls]["session_so_far"][0].startswith('Park scenario_1_q_1: answered Left; hint "')
+    review = (await ac.get("/api/v1/admin/feedback", headers=admin)).json()
+    assert (review[0]["label"], review[0]["strategy"]) == ("left_right", "swap sides")

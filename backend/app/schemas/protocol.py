@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 from datetime import datetime
 from app.services.window_test import WINDOW_QUESTION_IDS
 from app.models.protocol import ALL_LEGO_PUZZLE_IDS, normalize_puzzle_ids, normalize_stages
@@ -30,6 +30,8 @@ class WindowConfig(BaseModel):
 
 class PerspectiveConfig(BaseModel):
     selected_scenarios: List[int] = Field(default_factory=lambda: list(range(1, 9)))
+    # Ask only the first N questions of each scenario; 0 = all
+    questions_per_scenario: int = Field(default=0, ge=0, le=20)
     # "Need a hint?" unlocks after this many wrong answers to a question
     hint_unlock_after: int = Field(default=1, ge=0, le=3)
     max_hints: int = Field(default=1, ge=0, le=5)
@@ -75,6 +77,8 @@ class ProtocolUpdateIn(BaseModel):
     # The session being run today; None = students continue at their own pace
     active_round: Optional[int] = Field(default=None, ge=1, le=12)
     run_label: Optional[str] = Field(default=None, max_length=120)
+    # Demo mode: every session in one pass, students join this group after session 1
+    demo_group: Optional[Literal["experimental", "control", "natural_control"]] = None
     # Omitted = recommended design
     round_schedule: Optional[RoundSchedule] = None
     # Derived from the schedule on save; accepted for older clients
@@ -98,6 +102,7 @@ class ProtocolOut(BaseModel):
     total_rounds: int
     active_round: Optional[int] = None
     run_label: Optional[str] = None
+    demo_group: Optional[str] = None
     round_schedule: RoundSchedule
     ai_status: Dict[str, Optional[object]] = {}
     enabled_stages: List[str]

@@ -46,6 +46,22 @@ def _enable(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_report_retries_once_when_the_provider_is_busy(monkeypatch):
+    from app.services import session_report
+    calls = []
+
+    async def flaky(system, user, images):
+        calls.append(1)
+        if len(calls) == 1:
+            raise ai_feedback.AIUnavailable("503")
+        return json.dumps(REPORT), "fake"
+
+    monkeypatch.setitem(ai_feedback.VISION_PROVIDERS, settings.ai_provider, flaky)
+    monkeypatch.setattr(session_report, "RETRY_SECONDS", 0)
+    assert (await session_report._ask_with_one_retry("{}"))[1] == "fake" and len(calls) == 2
+
+
+@pytest.mark.asyncio
 async def test_report_is_made_when_a_session_ends_and_briefs_the_next_tutor(ac, admin, monkeypatch):
     await _set_protocol(ac, admin, GROUP_ONLY["experimental"])
     p = await _participant(ac)

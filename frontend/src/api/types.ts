@@ -46,6 +46,8 @@ export interface SessionOut {
   stages: string[]
   feedback_stages: string[]
   more_rounds: boolean
+  /** Demo mode: the next session starts straight away */
+  demo: boolean
 }
 
 export interface NextStageOut {

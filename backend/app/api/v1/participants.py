@@ -89,7 +89,7 @@ async def intake(payload: IntakeIn, db: AsyncSession = Depends(get_db)):
 
     return IntakeOut(
         participant=ParticipantOut.model_validate(participant),
-        session=session_out(session, participant, protocol_total_rounds(protocol), protocol_schedule(protocol)),
+        session=session_out(session, participant, protocol),
     )
 
 
@@ -109,7 +109,7 @@ async def lookup_participant(payload: ParticipantLookupIn, db: AsyncSession = De
     if resuming:
         status, next_round = "ready", resuming.round_number
     else:
-        status, next_round = await progress(participant, protocol_schedule(protocol), db)
+        status, next_round = await progress(participant, protocol_schedule(protocol), db, protocol.demo_group)
         status = gate_for_active_round(status, next_round, protocol.active_round)
 
     return ParticipantLookupOut(

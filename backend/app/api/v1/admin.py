@@ -140,6 +140,7 @@ async def get_protocol(db: AsyncSession = Depends(get_db)):
         total_rounds=protocol_total_rounds(protocol),
         active_round=protocol.active_round,
         run_label=protocol.run_label,
+        demo_group=protocol.demo_group,
         round_schedule=schedule,
         ai_status=ai_status(),
         enabled_stages=first_round_stages(schedule),
@@ -160,7 +161,8 @@ async def update_protocol(payload: ProtocolUpdateIn, db: AsyncSession = Depends(
     protocol.total_rounds = payload.total_rounds
     if payload.active_round is not None and payload.active_round > payload.total_rounds:
         raise HTTPException(status_code=422, detail="The session running today must be within the number of sessions")
-    protocol.active_round = payload.active_round
+    protocol.demo_group = payload.demo_group
+    protocol.active_round = None if payload.demo_group else payload.active_round
     protocol.run_label = (payload.run_label or "").strip() or None
     raw_schedule = payload.round_schedule.model_dump() if payload.round_schedule is not None else None
     schedule = normalize_schedule(raw_schedule, payload.total_rounds)
@@ -350,14 +352,13 @@ async def review_feedback(limit: int = 200, db: AsyncSession = Depends(get_db)):
     out = []
     for fb, round_number, code, task_type in rows:
         reason = json.loads(fb.trigger_reason or "{}")
-        tutor = reason.get("tutor_details") or {}
         out.append({
             "feedback_id": fb.id, "shown_at": fb.shown_at.isoformat() if fb.shown_at else None,
             "participant_code": code, "round_number": round_number, "task_type": task_type,
             "item_id": fb.item_id, "message": fb.message, "generated_by": fb.generated_by or "rule",
             "rule_message": reason.get("rule_message"), "failed_tries": reason.get("failed_tries"),
-            "label": tutor.get("strategy") or tutor.get("mistake_type"),
-            "mistake_type": tutor.get("mistake_type"), "corrected": fb.accepted,
+            "label": reason.get("mistake_type") or reason.get("strategy"),
+            "strategy": reason.get("strategy"), "corrected": fb.accepted,
         })
     return out
 

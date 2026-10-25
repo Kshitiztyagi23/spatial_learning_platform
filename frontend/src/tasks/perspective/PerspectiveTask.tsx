@@ -57,12 +57,12 @@ export function PerspectiveTask() {
         if (typeof cfg.hint_unlock_after === 'number' && typeof cfg.max_hints === 'number') {
           setHintPolicy({ unlockAfter: cfg.hint_unlock_after, maxHints: cfg.max_hints });
         }
-        if (cfg.selected_scenarios && Array.isArray(cfg.selected_scenarios)) {
-          const filtered = SCENARIOS.filter(s => cfg.selected_scenarios.includes(s.id));
-          if (filtered.length > 0) {
-            setScenarios(filtered);
-          }
-        }
+        const perScenario = typeof cfg.questions_per_scenario === 'number' ? cfg.questions_per_scenario : 0;
+        const picked = Array.isArray(cfg.selected_scenarios)
+          ? SCENARIOS.filter(s => cfg.selected_scenarios.includes(s.id))
+          : [];
+        const chosen = picked.length > 0 ? picked : SCENARIOS;
+        setScenarios(perScenario > 0 ? chosen.map(s => ({ ...s, questions: s.questions.slice(0, perScenario) })) : chosen);
       })
       .catch(err => {
         console.warn('Using default perspective scenarios:', err);

@@ -7,6 +7,7 @@ group, so the reading isn't biased by the condition. Generated in the
 background when a session ends; researchers can regenerate it in the admin
 console. Its summary also briefs the tutor in the student's next session.
 """
+import asyncio
 import json
 import logging
 import re
@@ -34,6 +35,7 @@ from app.services.tutor_context import session_history
 log = logging.getLogger(__name__)
 
 REPORT_PROMPT_VERSION = "report-v1"
+RETRY_SECONDS = 20
 # Tests point this at their own database; background tasks can't use get_db.
 SESSION_FACTORY = async_session_maker
 
@@ -160,6 +162,16 @@ def _parse_report(reply: str) -> dict | None:
     return report
 
 
+async def _ask_with_one_retry(facts: str) -> tuple[str, str]:
+    """Nobody waits on a report, so a busy/overloaded provider gets one more try."""
+    try:
+        return await ai_feedback.VISION_PROVIDERS[settings.ai_provider](SYSTEM_PROMPT, facts, [])
+    except AIUnavailable as e:
+        log.info("Session report: retrying after %s", e)
+        await asyncio.sleep(RETRY_SECONDS)
+        return await ai_feedback.VISION_PROVIDERS[settings.ai_provider](SYSTEM_PROMPT, facts, [])
+
+
 async def build_report(session_id: str, db: AsyncSession) -> SessionReport | None:
     """Compute (or recompute) the session's report and save it."""
     session = await db.get(Session, session_id)
@@ -173,7 +185,7 @@ async def build_report(session_id: str, db: AsyncSession) -> SessionReport | Non
     if ai_feedback.ai_status()["enabled"]:
         try:
             # The slower, long-timeout call: a report is longer than a hint and nobody waits on it
-            reply, model = await ai_feedback.VISION_PROVIDERS[settings.ai_provider](SYSTEM_PROMPT, json.dumps(facts), [])
+            reply, model = await _ask_with_one_retry(json.dumps(facts))
             parsed = _parse_report(reply)
             if parsed:
                 report.report_json, report.model, report.status = json.dumps(parsed), model, "ready"

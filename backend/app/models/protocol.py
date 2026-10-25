@@ -90,6 +90,9 @@ class StudyProtocol(Base):
     # Free-text label stamped on every session started while it is set,
     # e.g. "Session 2 - 15 Oct - School A"
     run_label: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Demo mode: when set, a student runs every session in one pass. After
+    # session 1 they join this group automatically and go straight on.
+    demo_group: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # JSON-encoded array of active stage names for this protocol
     enabled_stages_json: Mapped[str] = mapped_column(

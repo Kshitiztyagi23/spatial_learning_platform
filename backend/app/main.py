@@ -47,7 +47,8 @@ async def get_active_protocol_public(db: AsyncSession = Depends(get_db)):
         "first_stage": first_stage,
         "ai_feedback_percentage": protocol.ai_feedback_percentage,
         "total_rounds": protocol.total_rounds,
-        "active_round": protocol.active_round
+        "active_round": protocol.active_round,
+        "demo": bool(protocol.demo_group),
     }
 
 app.include_router(participants_router, prefix="/api/v1")
