@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.participant import Participant
 from app.models.session import Session
-from app.services.study_design import Schedule, participant_progress
+from app.services.study_design import CONDITIONS, Schedule, participant_progress
 
 
 async def last_completed_round(participant_id: str, db: AsyncSession) -> int:
@@ -27,6 +27,9 @@ async def open_session(participant_id: str, db: AsyncSession) -> Session | None:
     )
 
 
-async def progress(participant: Participant, schedule: Schedule, db: AsyncSession) -> tuple[str, int | None]:
-    """("ready", round) / ("waiting", None) / ("complete", None) - see study_design."""
-    return participant_progress(participant.condition, await last_completed_round(participant.id, db), schedule)
+async def progress(participant: Participant, schedule: Schedule, db: AsyncSession,
+                   demo_group: str | None = None) -> tuple[str, int | None]:
+    """("ready", round) / ("waiting", None) / ("complete", None) - see study_design.
+    In demo mode an unassigned student counts as the demo group, so nobody waits."""
+    condition = demo_group if demo_group and participant.condition not in CONDITIONS else participant.condition
+    return participant_progress(condition, await last_completed_round(participant.id, db), schedule)

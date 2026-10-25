@@ -2,21 +2,15 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class LegoDiagnosisIn(BaseModel):
-    code: str
-    view: str | None = None
-    # Horizontal area of the mismatch in that view: left / middle / right
-    area: str | None = None
-
-
 class FeedbackRequestIn(BaseModel):
+    """The student pressed "Need a hint?"."""
     task_type: Literal["lego", "spatial_perspective_taking"]
-    # LEGO: which failed Check this is on the current puzzle (1-based)
-    attempt: int = Field(default=0, ge=0)
-    diagnoses: list[LegoDiagnosisIn] = []
-    # Perspective: whether the participant's answer was correct
-    correct: bool | None = None
-    # Free-form identifiers for analysis (puzzle id, question id, ...)
+    # LEGO puzzle id or park stimulus id: the hint limit is per item
+    item_id: str = Field(min_length=1, max_length=80)
+    # Ignored: failed tries are counted by the server (LEGO checks, park
+    # answers). Accepted for older clients.
+    attempt: int = Field(default=0, ge=0, le=20)
+    # Free-form identifiers for analysis (question text, answer, ...)
     context: dict = {}
 
 
@@ -25,6 +19,15 @@ class FeedbackOut(BaseModel):
     feedback_id: str | None = None
     feedback_type: str | None = None
     message: str | None = None
+    # Why no hint: not_allowed | locked | limit | cooldown | nothing_to_fix
+    reason: str | None = None
+    # Button state after this request
+    enabled: bool = False
+    unlocked: bool = False
+    failed_tries: int = 0
+    unlock_after: int = 0
+    hints_used: int = 0
+    hints_left: int = 0
 
 
 class FeedbackAcknowledgeIn(BaseModel):

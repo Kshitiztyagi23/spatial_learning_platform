@@ -11,3 +11,6 @@ from .lego_submission import LegoSubmission
 from .adaptation_decision import AdaptationDecision
 from .audit_log import AuditLog
 from .protocol import StudyProtocol
+from .answer_attempt import AnswerAttempt
+from .scenario_map import ScenarioMap
+from .session_report import SessionReport

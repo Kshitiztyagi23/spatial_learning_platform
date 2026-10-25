@@ -835,3 +835,27 @@
   color: #1e293b;
   font-weight: 600;
 }
+
+/* "Not quite" after a wrong answer (groups with hints only) */
+.perspective-retry {
+  margin: 0.75rem 0 0.5rem;
+  color: #b8502e;
+  font-weight: 600;
+}
+
+.perspective-hint-button {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid #1e293b;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.perspective-hint-button:disabled {
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: default;
+}

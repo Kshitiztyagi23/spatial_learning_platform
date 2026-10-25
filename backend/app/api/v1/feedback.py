@@ -14,19 +14,37 @@ from app.services.feedback_rules import (
     lego_feedback,
     perspective_feedback,
 )
-from app.services.ai_feedback import phrase_hint
-from app.services.orchestration import session_feedback_stages
+from app.services.ai_feedback import PROMPT_VERSION, phrase_hint
+from app.services.session_report import earlier_summary
+from app.services.tutor_context import session_history
+from app.services.lego_tutor import TUTOR_PROMPT_VERSION, build_context, tutor_hint
+from app.services.lego_engine import get_puzzle
+from app.services.hint_policy import failed_tries, hint_status, hints_used, lego_checks, park_wrong_answers, task_policy
+from app.models.scenario_map import ScenarioMap
+from app.services.park_scenarios import get_question
+from app.services.park_tutor import PARK_PROMPT_VERSION, build_context as build_park_context, tutor_hint as park_tutor_hint
+from app.services.orchestration import get_or_create_active_protocol, session_feedback_stages
 from app.services.task_instances import get_or_create_task_instance
 
 router = APIRouter(prefix="/sessions/{session_id}/feedback", tags=["feedback"])
-
-NOT_SHOWN = FeedbackOut(shown=False)
 
 
 def hints_allowed(session: Session, task_type: str) -> bool:
     """Decided server-side from the session's schedule entry (set by
     researchers per group and round), never from the client."""
     return task_type in session_feedback_stages(session)
+
+
+def _area(region: dict | None, view: str | None, board: dict) -> str | None:
+    """Which horizontal third of the view card a mismatch sits in, or None
+    when it spans most of the card."""
+    if not region or not view:
+        return None
+    cols = board["width"] if view in ("front", "top") else board["depth"]
+    if cols <= 1 or region["colTo"] - region["colFrom"] + 1 > cols * 2 / 3:
+        return None
+    centre = (region["colFrom"] + region["colTo"]) / 2 / (cols - 1)
+    return "left" if centre < 1 / 3 else "right" if centre > 2 / 3 else "middle"
 
 
 @router.post("", response_model=FeedbackOut)
@@ -36,21 +54,29 @@ async def request_feedback(
     request: FeedbackRequestIn,
     db: AsyncSession = Depends(get_db)
 ):
+    """The student pressed "Need a hint?". Every rule is checked here."""
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     if not hints_allowed(session, request.task_type):
-        return NOT_SHOWN
+        return FeedbackOut(shown=False, reason="not_allowed")
 
-    diagnoses = [d.model_dump() for d in request.diagnoses]
-    if request.task_type == "lego":
-        feedback = lego_feedback(request.attempt, diagnoses)
-    else:
-        feedback = perspective_feedback(bool(request.correct))
-    if not feedback:
-        return NOT_SHOWN
-
+    protocol = await get_or_create_active_protocol(db)
+    policy = task_policy(protocol, request.task_type)
     task_instance = await get_or_create_task_instance(session_id, request.task_type, db)
+    used = await hints_used(task_instance.id, request.item_id, db)
+
+    if request.task_type == "lego":
+        checks = await lego_checks(task_instance.id, request.item_id, db)
+        tries = failed_tries(checks)
+    else:
+        checks = []
+        wrong_answers = await park_wrong_answers(task_instance.id, request.item_id, db)
+        tries = len(wrong_answers)
+    status = hint_status(True, tries, used, policy)
+    if not status["unlocked"]:
+        reason = "limit" if status["hints_left"] == 0 else "locked"
+        return FeedbackOut(shown=False, reason=reason, **status)
 
     last_shown = await db.scalar(
         select(FeedbackEvent.shown_at)
@@ -59,23 +85,74 @@ async def request_feedback(
         .limit(1)
     )
     if last_shown and datetime.utcnow() - last_shown < timedelta(seconds=COOLDOWN_SECONDS):
-        return NOT_SHOWN
+        return FeedbackOut(shown=False, reason="cooldown", **status)
 
-    # The rung the rule engine picked, so the AI phrases the same diagnosis
-    diagnosis = None
-    if request.task_type == "lego" and diagnoses:
-        diagnosis = diagnoses[min(request.attempt, len(diagnoses)) - 1]
-    phrased = await phrase_hint(request.task_type, feedback, request.context, diagnosis)
+    history = await session_history(session_id, db)
+    earlier = await earlier_summary(session, db)
+    if earlier:
+        history = [f"Last session: {earlier}"] + history
+    tutor_details: dict = {}
+    if request.task_type == "lego":
+        # What's wrong comes from the server's latest check of this puzzle
+        latest = checks[-1] if checks else {}
+        if latest.get("outcome") in (None, "solved", "empty"):
+            return FeedbackOut(shown=False, reason="nothing_to_fix", **status)
+        puzzle = get_puzzle(request.item_id)
+        diagnoses = [{**d, "area": _area(d.get("region"), d.get("view"), puzzle["board"])} for d in latest.get("diagnoses", [])]
+        # Rule ladder hint: the fallback if the AI tutor is unavailable
+        feedback = lego_feedback(used + 1, diagnoses)
+        if not feedback:
+            return FeedbackOut(shown=False, reason="nothing_to_fix", **status)
+        earlier = (await db.execute(
+            select(FeedbackEvent.message)
+            .where(FeedbackEvent.task_instance_id == task_instance.id, FeedbackEvent.item_id == request.item_id)
+            .order_by(FeedbackEvent.shown_at)
+        )).scalars().all()
+        context = build_context(puzzle, {**latest, "diagnoses": diagnoses}, tries, list(earlier), history)
+        phrased = await tutor_hint(context, feedback)
+        tutor_details = {
+            "prompt_version": TUTOR_PROMPT_VERSION,
+            "strategy": phrased.strategy,
+            "focus_view": phrased.focus_view,
+            "tutor_input": context,
+        }
+    else:
+        feedback = perspective_feedback(False)
+        found = get_question(request.item_id)
+        scene = await db.get(ScenarioMap, found[0]["id"]) if found else None
+        if found and scene and scene.status == "approved":
+            earlier = (await db.execute(
+                select(FeedbackEvent.message)
+                .where(FeedbackEvent.task_instance_id == task_instance.id, FeedbackEvent.item_id == request.item_id)
+                .order_by(FeedbackEvent.shown_at)
+            )).scalars().all()
+            context = build_park_context(scene.map_text, found[1], wrong_answers, list(earlier), history)
+            phrased = await park_tutor_hint(context, feedback)
+            tutor_details = {
+                "prompt_version": PARK_PROMPT_VERSION,
+                "strategy": phrased.strategy,
+                "mistake_type": phrased.mistake_type,
+                "answer_relation": context["child_answers"][-1]["relation"] if wrong_answers else None,
+                "tutor_input": context,
+            }
+        else:
+            # No approved scene map yet: reword the rule hint using the question
+            phrased = await phrase_hint(request.task_type, feedback, request.context, None, history)
+            tutor_details = {"prompt_version": PROMPT_VERSION}
 
     event = FeedbackEvent(
         session_id=session_id,
         task_instance_id=task_instance.id,
+        item_id=request.item_id,
+        requested=True,
         feedback_type=feedback.feedback_type,
         message=phrased.message,
         trigger_reason=json.dumps({
             "rule": feedback.trigger_reason,
             "rule_message": feedback.message,
             "model": phrased.model,
+            "failed_tries": tries,
+            **tutor_details,
             **request.context,
         }),
         rule_version=RULE_VERSION,
@@ -88,6 +165,7 @@ async def request_feedback(
         feedback_id=event.id,
         feedback_type=feedback.feedback_type,
         message=phrased.message,
+        **hint_status(True, tries, used + 1, policy),
     )
 
 

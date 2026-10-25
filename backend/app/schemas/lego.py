@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
@@ -11,6 +12,20 @@ class LegoEventIn(BaseModel):
     is_correct: bool | None = None
     details_json: str | None = None
 
+class LegoOrigin(BaseModel):
+    x: int
+    y: int
+    z: int
+
+class LegoBrick(BaseModel):
+    typeId: str = Field(pattern=r"^\d+x\d+-(red|blue|yellow|green|white)$")
+    rotation: Literal[0, 90, 180, 270]
+    origin: LegoOrigin
+
+class LegoCheckIn(BaseModel):
+    puzzle_id: str
+    placed: list[LegoBrick] = Field(default_factory=list, max_length=200)
+
 class LegoPuzzleResult(BaseModel):
     puzzle_id: str
     solved: bool
@@ -20,7 +35,7 @@ class LegoPuzzleResult(BaseModel):
 class LegoSubmitIn(BaseModel):
     final_build_json: str
     duration_seconds: int = Field(ge=0)
-    # Number of puzzles offered by the protocol; the denominator for accuracy
+    # Accepted from older clients but ignored: the server scores from its own records
     puzzle_count: int = Field(ge=0, default=0)
     results: list[LegoPuzzleResult] = []
 

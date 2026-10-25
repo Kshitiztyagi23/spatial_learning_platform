@@ -15,15 +15,20 @@ from app.services.orchestration import (
     session_feedback_stages,
 )
 from app.services.session_flow import start_round
-from app.services.study_design import Schedule, has_more_rounds, order_stages, round_plan, round_type
+from app.services.study_design import CONDITIONS, has_more_rounds, order_stages, round_plan, round_type
 import json
-from app.models.protocol import ALL_LEGO_PUZZLE_IDS, normalize_puzzle_ids
+from app.models.protocol import ALL_LEGO_PUZZLE_IDS, StudyProtocol, normalize_puzzle_ids
+from app.services.hint_policy import task_policy
 from app.services.window_test import DEFAULT_WINDOW_CONFIG, WINDOW_QUESTION_IDS
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
-def session_out(session: Session, participant: Participant, total_rounds: int, schedule: Schedule) -> SessionOut:
+def session_out(session: Session, participant: Participant, protocol: StudyProtocol) -> SessionOut:
+    total_rounds, schedule = protocol_total_rounds(protocol), protocol_schedule(protocol)
+    condition = participant.condition
+    if protocol.demo_group and condition not in CONDITIONS:
+        condition = protocol.demo_group   # demo: they join this group right after session 1
     return SessionOut(
         id=session.id,
         participant_id=session.participant_id,
@@ -37,7 +42,8 @@ def session_out(session: Session, participant: Participant, total_rounds: int, s
         participant_code=participant.participant_code,
         stages=get_session_stage_sequence(session),
         feedback_stages=order_stages(list(session_feedback_stages(session)))[:-1],
-        more_rounds=has_more_rounds(participant.condition, session.round_number, schedule),
+        more_rounds=has_more_rounds(condition, session.round_number, schedule),
+        demo=bool(protocol.demo_group),
     )
 
 @router.post("", response_model=SessionOut)
@@ -56,7 +62,7 @@ async def create_session(
     protocol = await get_or_create_active_protocol(db)
     session = await start_round(participant, protocol, db)
     await db.commit()
-    return session_out(session, participant, protocol_total_rounds(protocol), protocol_schedule(protocol))
+    return session_out(session, participant, protocol)
 
 @router.get("/{session_id}", response_model=SessionOut)
 async def get_session(
@@ -72,7 +78,7 @@ async def get_session(
 
     participant = await db.get(Participant, session.participant_id)
     protocol = await get_or_create_active_protocol(db)
-    return session_out(session, participant, protocol_total_rounds(protocol), protocol_schedule(protocol))
+    return session_out(session, participant, protocol)
 
 @router.get("/{session_id}/next-stage", response_model=NextStageOut)
 async def get_next_stage_endpoint(
@@ -133,7 +139,9 @@ async def get_task_config_endpoint(
             "task_type": "spatial_perspective_taking",
             "condition": session.condition,
             "ai_hints_enabled": "spatial_perspective_taking" in hint_stages,
-            "selected_scenarios": persp_cfg.get("selected_scenarios", list(range(1, 9)))
+            "selected_scenarios": persp_cfg.get("selected_scenarios", list(range(1, 9))),
+            "questions_per_scenario": persp_cfg.get("questions_per_scenario", 0),
+            **task_policy(protocol, "spatial_perspective_taking")
         }
     elif task_type == "lego":
         lego_cfg = json.loads(protocol.lego_config_json)
@@ -141,6 +149,7 @@ async def get_task_config_endpoint(
             "task_type": "lego",
             "condition": session.condition,
             "ai_hints_enabled": "lego" in hint_stages,
+            **task_policy(protocol, "lego"),
             "selected_puzzles": normalize_puzzle_ids(lego_cfg.get("selected_puzzles", ALL_LEGO_PUZZLE_IDS)),
             "time_limit_seconds": lego_cfg.get("time_limit_seconds", 600)
         }

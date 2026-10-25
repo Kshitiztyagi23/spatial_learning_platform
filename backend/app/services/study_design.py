@@ -94,8 +94,9 @@ def _clean_plan(entry, first_session: bool) -> Plan:
     else:
         stages = [s for s in stages if s not in FIRST_ROUND_ONLY]
     stages = order_stages(stages)[:-1]
-    # No hints in session 1: nobody has a group yet
-    feedback = [] if first_session else [s for s in entry.get("feedback", []) if s in FEEDBACK_STAGES and s in stages]
+    # Hints ticked in session 1 apply to every student, since nobody has a
+    # group yet (off in the recommended design; useful for trying things out)
+    feedback = [s for s in entry.get("feedback", []) if s in FEEDBACK_STAGES and s in stages]
     return {"stages": stages, "feedback": order_stages(feedback)[:-1]}
 
 

@@ -18,6 +18,7 @@ class SessionOut(BaseModel):
     stages: list[str] = []            # this session's own stage plan
     feedback_stages: list[str] = []   # stages that give hints this session
     more_rounds: bool = False         # another session follows this one
+    demo: bool = False                # demo mode: the next session starts straight away
     
     model_config = ConfigDict(from_attributes=True)
 

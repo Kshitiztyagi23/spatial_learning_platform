@@ -518,10 +518,10 @@
   outline-offset: 1px;
 }
 
-/* Experimental-condition hint, pinned to the bottom of the board */
+/* Experimental-condition hint, pinned above the hint button */
 .board-hint {
   position: absolute;
-  bottom: 16px;
+  bottom: 64px;
   left: 50%;
   transform: translateX(-50%);
   max-width: calc(100% - 32px);
@@ -534,4 +534,30 @@
   border-radius: 8px;
   z-index: 20;
   pointer-events: none;
+}
+
+/* "Need a hint?" (feedback groups only); greyed out until unlocked */
+.board-hint-button {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 20;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+  background-color: var(--sheet);
+  color: var(--ink);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.board-hint-button:disabled {
+  border-color: var(--rule);
+  color: var(--quiet);
+  cursor: default;
+}
+
+.board-hint-left {
+  font-weight: var(--font-weight-regular);
 }

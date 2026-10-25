@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProtocolData, CatalogsData, ConditionSplit, getRecommendedSchedule, updateProtocol } from '../api/admin';
+import { ProtocolData, CatalogsData, ConditionSplit, HintPolicy, getRecommendedSchedule, updateProtocol } from '../api/admin';
 import { ScheduleEditor, resizeSchedule } from './ScheduleEditor';
 import { GroupAssignmentPanel } from './GroupAssignmentPanel';
 import { Button } from '../shared/Button';
@@ -8,6 +8,30 @@ interface Props {
   protocol: ProtocolData;
   catalogs: CatalogsData;
   onProtocolUpdated: (updated: ProtocolData) => void;
+}
+
+/** Hint button rules for one task (applies where the session schedule turns hints on). */
+function HintPolicyFields({ value, tries, onChange }: { value: HintPolicy; tries: string; onChange: (v: HintPolicy) => void }) {
+  const field = (key: keyof HintPolicy, label: string, max: number) => (
+    <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      {label}
+      <input
+        type="number"
+        min={0}
+        max={max}
+        value={value[key]}
+        onChange={(e) => onChange({ ...value, [key]: Math.max(0, Math.min(max, Number(e.target.value) || 0)) })}
+        style={{ width: '4.5rem', padding: '0.35rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+      />
+    </label>
+  );
+  return (
+    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: '0.5rem' }}>
+      <b style={{ fontSize: '0.9rem' }}>🤖 "Need a hint?" button</b>
+      {field('hint_unlock_after', `Unlocks after ${tries}`, 10)}
+      {field('max_hints', 'Max hints each', 10)}
+    </div>
+  );
 }
 
 const GROUPS: { id: keyof ConditionSplit; label: string; description: string }[] = [
@@ -192,11 +216,19 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontWeight: 600 }}>
               Session running now
               <select
-                value={formData.active_round ?? ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, active_round: e.target.value ? Number(e.target.value) : null }))}
+                value={formData.demo_group ? 'demo' : formData.active_round ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    demo_group: v === 'demo' ? prev.demo_group ?? 'experimental' : null,
+                    active_round: v && v !== 'demo' ? Number(v) : null,
+                  }));
+                }}
                 style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 400 }}
               >
                 <option value="">Any (students continue at their own pace)</option>
+                <option value="demo">🎬 Demo: every session in one pass</option>
                 {Array.from({ length: formData.total_rounds }, (_, i) => i + 1).map(n => (
                   <option key={n} value={n}>
                     Session {n}{n === 1 ? ' (pre-test, new students join)' : n === formData.total_rounds ? ' (post-test)' : ''}
@@ -204,6 +236,18 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
                 ))}
               </select>
             </label>
+            {formData.demo_group && (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontWeight: 600 }}>
+                Demo students join
+                <select
+                  value={formData.demo_group}
+                  onChange={(e) => setFormData(prev => ({ ...prev, demo_group: e.target.value as keyof ConditionSplit }))}
+                  style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 400 }}
+                >
+                  {GROUPS.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
+                </select>
+              </label>
+            )}
             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontWeight: 600, flex: 1, minWidth: '240px' }}>
               Label for this sitting (saved on every session started)
               <input
@@ -216,6 +260,14 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
               />
             </label>
           </div>
+          {formData.demo_group && (
+            <p style={{ margin: '0.6rem 0 0', fontSize: '0.85rem', color: '#92400e', background: '#fef3c7', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
+              Demo: each student does session 1, joins the group chosen here (no "Assign groups" step) and goes
+              straight on through every later session of that group's schedule, then the post-test. Sessions are
+              still saved separately and labelled "Demo" unless a label is set. Switch back to "Any" or a session
+              number for the real study.
+            </p>
+          )}
           <p style={{ margin: '0.6rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
             With a session chosen, only students due for it can start, and new students can only join on session 1.
             Unfinished sessions can always be finished. Save the protocol to apply.
@@ -439,6 +491,26 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
             );
           })}
         </div>
+        <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+          Questions per scenario
+          <input
+            type="number"
+            min={0}
+            max={20}
+            value={formData.perspective_config.questions_per_scenario ?? 0}
+            onChange={(e) => {
+              const n = Math.max(0, Math.min(20, Number(e.target.value) || 0));
+              setFormData(prev => ({ ...prev, perspective_config: { ...prev.perspective_config, questions_per_scenario: n } }));
+            }}
+            style={{ width: '4.5rem', padding: '0.35rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+          />
+          <span style={{ color: '#64748b' }}>0 = all questions; e.g. 3 for a short demo</span>
+        </label>
+        <HintPolicyFields
+          value={formData.perspective_config}
+          tries="wrong answers"
+          onChange={(v) => setFormData(prev => ({ ...prev, perspective_config: { ...prev.perspective_config, ...v } }))}
+        />
       </div>
 
       {/* 5. 3D LEGO Puzzle Pool */}
@@ -499,6 +571,11 @@ export function ProtocolConfigTab({ protocol, catalogs, onProtocolUpdated }: Pro
           );
         })}
 
+        <HintPolicyFields
+          value={formData.lego_config}
+          tries="failed checks"
+          onChange={(v) => setFormData(prev => ({ ...prev, lego_config: { ...prev.lego_config, ...v } }))}
+        />
       </div>
 
       {/* Save Button */}

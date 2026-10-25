@@ -1,17 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSessionContext, useSessionDispatch } from '../../orchestration/SessionContext';
-import { completeStage, getSession } from '../../api/sessions';
+import { completeStage, createSession, getSession } from '../../api/sessions';
+import { STAGE_ROUTES, type Stage } from '../../orchestration/stages';
+import { Button } from '../../shared/Button';
 
 interface Finished {
   code: string | null;
   moreSessions: boolean;
+  demo: boolean;
+  participantId: string;
+  roundNumber: number;
 }
 
 export function DonePage() {
   const { sessionId, participantCode } = useSessionContext();
   const setSession = useSessionDispatch();
+  const navigate = useNavigate();
   const [finished, setFinished] = useState<Finished | null>(null);
   const [error, setError] = useState('');
+  const [continuing, setContinuing] = useState(false);
 
   useEffect(() => {
     const markDone = async () => {
@@ -22,6 +30,9 @@ export function DonePage() {
           setFinished({
             code: session.participant_code ?? participantCode,
             moreSessions: session.more_rounds,
+            demo: session.demo,
+            participantId: session.participant_id,
+            roundNumber: session.round_number,
           });
           // Forget the finished session so the next participant on this tab starts fresh
           setSession({ sessionId: null, participantId: null, condition: null, participantCode: null });
@@ -34,6 +45,44 @@ export function DonePage() {
   }, [sessionId]);
 
   const moreSessions = finished?.moreSessions ?? false;
+
+  // Demo mode: start the next session now instead of coming back with the code
+  const continueDemo = async () => {
+    if (!finished) return;
+    setContinuing(true);
+    setError('');
+    try {
+      const session = await createSession({ participant_id: finished.participantId });
+      setSession({
+        participantId: finished.participantId,
+        sessionId: session.id,
+        condition: session.condition,
+        participantCode: session.participant_code,
+        currentStage: session.current_stage,
+        enabledStages: session.stages,
+      });
+      navigate(STAGE_ROUTES[session.current_stage as Stage] || '/done');
+    } catch (err: any) {
+      setError(err.message || 'Could not start the next session');
+      setContinuing(false);
+    }
+  };
+
+  if (finished?.demo && moreSessions) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+        <h2 style={{ marginBottom: '1rem' }}>Session {finished.roundNumber} done</h2>
+        <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>
+          Demo mode: your answers are saved. The next session starts straight away.
+          {finished.code && <> Your code is <b>{finished.code}</b>.</>}
+        </p>
+        <Button variant="primary" onClick={continueDemo} loading={continuing}>
+          Continue to the next session →
+        </Button>
+        {error && <div style={{ color: 'var(--error)', fontSize: '0.875rem', marginTop: '1rem' }}>Notice: {error}</div>}
+      </div>
+    );
+  }
 
   return (
     <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>

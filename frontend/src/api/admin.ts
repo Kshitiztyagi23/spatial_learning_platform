@@ -13,11 +13,19 @@ export interface WindowConfig {
   shuffle: boolean;
 }
 
-export interface PerspectiveConfig {
-  selected_scenarios: number[];
+/** "Need a hint?" unlocks after this many failed tries; at most max_hints per item */
+export interface HintPolicy {
+  hint_unlock_after: number;
+  max_hints: number;
 }
 
-export interface LegoConfig {
+export interface PerspectiveConfig extends HintPolicy {
+  selected_scenarios: number[];
+  /** Ask only the first N questions of each scenario; 0 = all */
+  questions_per_scenario: number;
+}
+
+export interface LegoConfig extends HintPolicy {
   selected_puzzles: string[];
   time_limit_seconds: number;
   ai_hints_enabled: boolean;
@@ -65,6 +73,8 @@ export interface ProtocolData {
   active_round: number | null;
   /** Label stamped on sessions started while set, e.g. "Session 2 - 15 Oct" */
   run_label: string | null;
+  /** Demo mode: every session in one pass; students join this group after session 1 */
+  demo_group: keyof ConditionSplit | null;
   round_schedule: RoundSchedule;
   ai_status?: AiStatus;
   enabled_stages: string[];
@@ -164,4 +174,87 @@ export async function downloadExport(exportType: string): Promise<void> {
   link.download = match?.[1] ?? `${exportType}.csv`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+// ---- AI tutor (scene maps, session reports, hint review) ----------------------------
+
+export interface SceneMapItem {
+  scenario_id: number;
+  title: string;
+  has_photos: boolean;
+  map: null | {
+    map_text: string;
+    status: 'draft' | 'approved';
+    model: string | null;
+    generated_at: string | null;
+    approved_at: string | null;
+  };
+}
+
+export interface SessionReportBody {
+  summary: string;
+  strengths: string[];
+  difficulties: string[];
+  error_patterns: string[];
+  strategy_observations: string[];
+  response_to_hints: string;
+  next_focus: string;
+}
+
+export interface SessionReport {
+  status: 'ready' | 'facts_only' | 'failed';
+  facts: Record<string, unknown>;
+  report: SessionReportBody | null;
+  model: string | null;
+  error: string | null;
+  generated_at: string | null;
+}
+
+export interface ReportListItem {
+  session_id: string;
+  participant_code: string;
+  condition: string;
+  round_number: number;
+  session_label: string | null;
+  ended_at: string | null;
+  report: SessionReport | null;
+}
+
+export interface HintReviewItem {
+  feedback_id: string;
+  shown_at: string | null;
+  participant_code: string;
+  round_number: number;
+  task_type: string | null;
+  item_id: string | null;
+  message: string;
+  generated_by: string;
+  rule_message: string | null;
+  failed_tries: number | null;
+  label: string | null;
+  corrected: boolean | null;
+}
+
+export async function listSceneMaps(): Promise<SceneMapItem[]> {
+  return (await apiClient.get<SceneMapItem[]>('/admin/park/maps')).data;
+}
+
+export async function generateSceneMap(scenarioId: number): Promise<SceneMapItem> {
+  return (await apiClient.post<SceneMapItem>(`/admin/park/maps/${scenarioId}/generate`, undefined, { timeout: 180000 })).data;
+}
+
+export async function saveSceneMap(scenarioId: number, mapText: string, status: 'draft' | 'approved'): Promise<SceneMapItem> {
+  return (await apiClient.put<SceneMapItem>(`/admin/park/maps/${scenarioId}`, { map_text: mapText, status })).data;
+}
+
+export async function listReports(): Promise<ReportListItem[]> {
+  return (await apiClient.get<ReportListItem[]>('/admin/reports')).data;
+}
+
+export async function regenerateReport(sessionId: string): Promise<SessionReport> {
+  return (await apiClient.post<SessionReport>(`/admin/reports/${sessionId}/regenerate`, undefined, { timeout: 180000 })).data;
+}
+
+export async function listHints(): Promise<HintReviewItem[]> {
+  return (await apiClient.get<HintReviewItem[]>('/admin/feedback')).data;
 }

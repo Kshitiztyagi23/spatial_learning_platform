@@ -1,0 +1,634 @@
+[
+  {
+    "id": 1,
+    "title": "Scenario 1: Park & Playground Layout",
+    "context": "Use the 6 reference views to understand the layout of the park, including the playground equipment, benches, and central building.",
+    "questions": [
+      {
+        "id": 1,
+        "questionNumber": 1,
+        "text": "If C is standing at the yellow swing in the park and facing the monkey bar, what would be the location of the see-saw?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 2,
+        "questionNumber": 2,
+        "text": "If A is standing at the Monkey Bar and facing the Slide, where is the Building?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 3,
+        "questionNumber": 3,
+        "text": "If B is standing at the Cube Structure and facing the Circular Bench, where is the Building?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 4,
+        "questionNumber": 4,
+        "text": "If D is standing near the Circular Bench and facing the Building, where is the Monkey Bar?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 5,
+        "questionNumber": 5,
+        "text": "If C is sitting on the Rectangular Bench and looking at the Circular Swing, where is the Slide?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 6,
+        "questionNumber": 6,
+        "text": "If B is standing near the Cube Structure and facing the Rectangular Bench, where is the building?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 7,
+        "questionNumber": 7,
+        "text": "If D is at the Circular Swing and facing the Monkey Bar, where is the Circular Bench?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 8,
+        "questionNumber": 8,
+        "text": "If A is at the See Saw and facing the Building, where is the Monkey Bar?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 9,
+        "questionNumber": 9,
+        "text": "If C is standing near the Swings and facing the Monkey Bar, where is the Rectangular Bench?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 10,
+        "questionNumber": 10,
+        "text": "If B is at the Slide and facing the Circular Bench, where is the building?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 11,
+        "questionNumber": 11,
+        "text": "If D is sitting at the Rectangular Bench and facing the Building, where is the Monkey Bar?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 12,
+        "questionNumber": 12,
+        "text": "If A is standing near the Monkey Bar and facing the Rectangular Bench, where is the Circular Bench?",
+        "correctAnswer": "Right"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Scenario 2: Central Plaza & Gazebo",
+    "context": "Examine the plaza angles to determine perspective directions around the gazebo, fountain, and statues.",
+    "questions": [
+      {
+        "id": 201,
+        "questionNumber": 1,
+        "text": "If A is standing at the Gazebo and facing the Fountain, where is the Flower Bed?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 202,
+        "questionNumber": 2,
+        "text": "If B is standing at the Fountain and facing the Flower Bed, where is the Statue?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 203,
+        "questionNumber": 3,
+        "text": "If C is standing at the Flower Bed and facing the Statue, where is the Gazebo?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 204,
+        "questionNumber": 4,
+        "text": "If D is standing at the Statue and facing the Gazebo, where is the Fountain?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 205,
+        "questionNumber": 5,
+        "text": "If A is standing at the Gazebo and facing the Fountain, where is the Flower Bed?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 206,
+        "questionNumber": 6,
+        "text": "If B is standing at the Fountain and facing the Flower Bed, where is the Statue?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 207,
+        "questionNumber": 7,
+        "text": "If C is standing at the Flower Bed and facing the Statue, where is the Gazebo?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 208,
+        "questionNumber": 8,
+        "text": "If D is standing at the Statue and facing the Gazebo, where is the Fountain?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 209,
+        "questionNumber": 9,
+        "text": "If A is standing at the Gazebo and facing the Fountain, where is the Flower Bed?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 210,
+        "questionNumber": 10,
+        "text": "If B is standing at the Fountain and facing the Flower Bed, where is the Statue?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 211,
+        "questionNumber": 11,
+        "text": "If C is standing at the Flower Bed and facing the Statue, where is the Gazebo?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 212,
+        "questionNumber": 12,
+        "text": "If D is standing at the Statue and facing the Gazebo, where is the Fountain?",
+        "correctAnswer": "Left"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Scenario 3: Sports Ground & Bleachers",
+    "context": "Review the sports complex views from different spectator and player vantage points.",
+    "questions": [
+      {
+        "id": 301,
+        "questionNumber": 1,
+        "text": "If A is standing at the Basketball Court and facing the Bleachers, where is the Scoreboard?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 302,
+        "questionNumber": 2,
+        "text": "If B is standing at the Bleachers and facing the Scoreboard, where is the Cafeteria?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 303,
+        "questionNumber": 3,
+        "text": "If C is standing at the Scoreboard and facing the Cafeteria, where is the Basketball Court?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 304,
+        "questionNumber": 4,
+        "text": "If D is standing at the Cafeteria and facing the Basketball Court, where is the Bleachers?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 305,
+        "questionNumber": 5,
+        "text": "If A is standing at the Basketball Court and facing the Bleachers, where is the Scoreboard?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 306,
+        "questionNumber": 6,
+        "text": "If B is standing at the Bleachers and facing the Scoreboard, where is the Cafeteria?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 307,
+        "questionNumber": 7,
+        "text": "If C is standing at the Scoreboard and facing the Cafeteria, where is the Basketball Court?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 308,
+        "questionNumber": 8,
+        "text": "If D is standing at the Cafeteria and facing the Basketball Court, where is the Bleachers?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 309,
+        "questionNumber": 9,
+        "text": "If A is standing at the Basketball Court and facing the Bleachers, where is the Scoreboard?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 310,
+        "questionNumber": 10,
+        "text": "If B is standing at the Bleachers and facing the Scoreboard, where is the Cafeteria?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 311,
+        "questionNumber": 11,
+        "text": "If C is standing at the Scoreboard and facing the Cafeteria, where is the Basketball Court?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 312,
+        "questionNumber": 12,
+        "text": "If D is standing at the Cafeteria and facing the Basketball Court, where is the Bleachers?",
+        "correctAnswer": "Front"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Scenario 4: Campus Quad & Clock Tower",
+    "context": "Identify relative positions across the university quadrangle and surrounding monuments.",
+    "questions": [
+      {
+        "id": 401,
+        "questionNumber": 1,
+        "text": "If A is standing at the Library Entrance and facing the Clock Tower, where is the Bike Rack?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 402,
+        "questionNumber": 2,
+        "text": "If B is standing at the Clock Tower and facing the Bike Rack, where is the Flagpole?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 403,
+        "questionNumber": 3,
+        "text": "If C is standing at the Bike Rack and facing the Flagpole, where is the Library Entrance?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 404,
+        "questionNumber": 4,
+        "text": "If D is standing at the Flagpole and facing the Library Entrance, where is the Clock Tower?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 405,
+        "questionNumber": 5,
+        "text": "If A is standing at the Library Entrance and facing the Clock Tower, where is the Bike Rack?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 406,
+        "questionNumber": 6,
+        "text": "If B is standing at the Clock Tower and facing the Bike Rack, where is the Flagpole?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 407,
+        "questionNumber": 7,
+        "text": "If C is standing at the Bike Rack and facing the Flagpole, where is the Library Entrance?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 408,
+        "questionNumber": 8,
+        "text": "If D is standing at the Flagpole and facing the Library Entrance, where is the Clock Tower?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 409,
+        "questionNumber": 9,
+        "text": "If A is standing at the Library Entrance and facing the Clock Tower, where is the Bike Rack?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 410,
+        "questionNumber": 10,
+        "text": "If B is standing at the Clock Tower and facing the Bike Rack, where is the Flagpole?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 411,
+        "questionNumber": 11,
+        "text": "If C is standing at the Bike Rack and facing the Flagpole, where is the Library Entrance?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 412,
+        "questionNumber": 12,
+        "text": "If D is standing at the Flagpole and facing the Library Entrance, where is the Clock Tower?",
+        "correctAnswer": "Behind"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Scenario 5: Lake Park & Pavilion",
+    "context": "Determine orientations along the scenic lake path, bridge, and pavilion.",
+    "questions": [
+      {
+        "id": 501,
+        "questionNumber": 1,
+        "text": "If A is standing at the Pond Bridge and facing the Duck Feeding Dock, where is the Willow Tree?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 502,
+        "questionNumber": 2,
+        "text": "If B is standing at the Duck Feeding Dock and facing the Willow Tree, where is the Pavilion?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 503,
+        "questionNumber": 3,
+        "text": "If C is standing at the Willow Tree and facing the Pavilion, where is the Pond Bridge?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 504,
+        "questionNumber": 4,
+        "text": "If D is standing at the Pavilion and facing the Pond Bridge, where is the Duck Feeding Dock?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 505,
+        "questionNumber": 5,
+        "text": "If A is standing at the Pond Bridge and facing the Duck Feeding Dock, where is the Willow Tree?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 506,
+        "questionNumber": 6,
+        "text": "If B is standing at the Duck Feeding Dock and facing the Willow Tree, where is the Pavilion?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 507,
+        "questionNumber": 7,
+        "text": "If C is standing at the Willow Tree and facing the Pavilion, where is the Pond Bridge?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 508,
+        "questionNumber": 8,
+        "text": "If D is standing at the Pavilion and facing the Pond Bridge, where is the Duck Feeding Dock?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 509,
+        "questionNumber": 9,
+        "text": "If A is standing at the Pond Bridge and facing the Duck Feeding Dock, where is the Willow Tree?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 510,
+        "questionNumber": 10,
+        "text": "If B is standing at the Duck Feeding Dock and facing the Willow Tree, where is the Pavilion?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 511,
+        "questionNumber": 11,
+        "text": "If C is standing at the Willow Tree and facing the Pavilion, where is the Pond Bridge?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 512,
+        "questionNumber": 12,
+        "text": "If D is standing at the Pavilion and facing the Pond Bridge, where is the Duck Feeding Dock?",
+        "correctAnswer": "Right"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Scenario 6: School Courtyard",
+    "context": "Analyze positions within the school courtyard and classroom building access points.",
+    "questions": [
+      {
+        "id": 601,
+        "questionNumber": 1,
+        "text": "If A is standing at the School Gate and facing the Principal Office, where is the Courtyard?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 602,
+        "questionNumber": 2,
+        "text": "If B is standing at the Principal Office and facing the Courtyard, where is the Gymnasium?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 603,
+        "questionNumber": 3,
+        "text": "If C is standing at the Courtyard and facing the Gymnasium, where is the School Gate?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 604,
+        "questionNumber": 4,
+        "text": "If D is standing at the Gymnasium and facing the School Gate, where is the Principal Office?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 605,
+        "questionNumber": 5,
+        "text": "If A is standing at the School Gate and facing the Principal Office, where is the Courtyard?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 606,
+        "questionNumber": 6,
+        "text": "If B is standing at the Principal Office and facing the Courtyard, where is the Gymnasium?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 607,
+        "questionNumber": 7,
+        "text": "If C is standing at the Courtyard and facing the Gymnasium, where is the School Gate?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 608,
+        "questionNumber": 8,
+        "text": "If D is standing at the Gymnasium and facing the School Gate, where is the Principal Office?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 609,
+        "questionNumber": 9,
+        "text": "If A is standing at the School Gate and facing the Principal Office, where is the Courtyard?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 610,
+        "questionNumber": 10,
+        "text": "If B is standing at the Principal Office and facing the Courtyard, where is the Gymnasium?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 611,
+        "questionNumber": 11,
+        "text": "If C is standing at the Courtyard and facing the Gymnasium, where is the School Gate?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 612,
+        "questionNumber": 12,
+        "text": "If D is standing at the Gymnasium and facing the School Gate, where is the Principal Office?",
+        "correctAnswer": "Left"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Scenario 7: Adventure Play Zone",
+    "context": "Inspect the obstacle course and climbing structures from multiple angles.",
+    "questions": [
+      {
+        "id": 701,
+        "questionNumber": 1,
+        "text": "If A is standing at the Playground Carousel and facing the Sandbox, where is the Climbing Wall?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 702,
+        "questionNumber": 2,
+        "text": "If B is standing at the Sandbox and facing the Climbing Wall, where is the Picnic Table?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 703,
+        "questionNumber": 3,
+        "text": "If C is standing at the Climbing Wall and facing the Picnic Table, where is the Playground Carousel?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 704,
+        "questionNumber": 4,
+        "text": "If D is standing at the Picnic Table and facing the Playground Carousel, where is the Sandbox?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 705,
+        "questionNumber": 5,
+        "text": "If A is standing at the Playground Carousel and facing the Sandbox, where is the Climbing Wall?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 706,
+        "questionNumber": 6,
+        "text": "If B is standing at the Sandbox and facing the Climbing Wall, where is the Picnic Table?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 707,
+        "questionNumber": 7,
+        "text": "If C is standing at the Climbing Wall and facing the Picnic Table, where is the Playground Carousel?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 708,
+        "questionNumber": 8,
+        "text": "If D is standing at the Picnic Table and facing the Playground Carousel, where is the Sandbox?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 709,
+        "questionNumber": 9,
+        "text": "If A is standing at the Playground Carousel and facing the Sandbox, where is the Climbing Wall?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 710,
+        "questionNumber": 10,
+        "text": "If B is standing at the Sandbox and facing the Climbing Wall, where is the Picnic Table?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 711,
+        "questionNumber": 11,
+        "text": "If C is standing at the Climbing Wall and facing the Picnic Table, where is the Playground Carousel?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 712,
+        "questionNumber": 12,
+        "text": "If D is standing at the Picnic Table and facing the Playground Carousel, where is the Sandbox?",
+        "correctAnswer": "Front"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Scenario 8: Botanical Garden & Amphitheater",
+    "context": "Navigate relative orientations between the garden beds, stage, and observation deck.",
+    "questions": [
+      {
+        "id": 801,
+        "questionNumber": 1,
+        "text": "If A is standing at the Amphitheater and facing the Stage, where is the Sound Booth?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 802,
+        "questionNumber": 2,
+        "text": "If B is standing at the Stage and facing the Sound Booth, where is the Snack Bar?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 803,
+        "questionNumber": 3,
+        "text": "If C is standing at the Sound Booth and facing the Snack Bar, where is the Amphitheater?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 804,
+        "questionNumber": 4,
+        "text": "If D is standing at the Snack Bar and facing the Amphitheater, where is the Stage?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 805,
+        "questionNumber": 5,
+        "text": "If A is standing at the Amphitheater and facing the Stage, where is the Sound Booth?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 806,
+        "questionNumber": 6,
+        "text": "If B is standing at the Stage and facing the Sound Booth, where is the Snack Bar?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 807,
+        "questionNumber": 7,
+        "text": "If C is standing at the Sound Booth and facing the Snack Bar, where is the Amphitheater?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 808,
+        "questionNumber": 8,
+        "text": "If D is standing at the Snack Bar and facing the Amphitheater, where is the Stage?",
+        "correctAnswer": "Behind"
+      },
+      {
+        "id": 809,
+        "questionNumber": 9,
+        "text": "If A is standing at the Amphitheater and facing the Stage, where is the Sound Booth?",
+        "correctAnswer": "Right"
+      },
+      {
+        "id": 810,
+        "questionNumber": 10,
+        "text": "If B is standing at the Stage and facing the Sound Booth, where is the Snack Bar?",
+        "correctAnswer": "Left"
+      },
+      {
+        "id": 811,
+        "questionNumber": 11,
+        "text": "If C is standing at the Sound Booth and facing the Snack Bar, where is the Amphitheater?",
+        "correctAnswer": "Front"
+      },
+      {
+        "id": 812,
+        "questionNumber": 12,
+        "text": "If D is standing at the Snack Bar and facing the Amphitheater, where is the Stage?",
+        "correctAnswer": "Behind"
+      }
+    ]
+  }
+]

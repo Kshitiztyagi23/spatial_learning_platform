@@ -18,3 +18,7 @@ class FeedbackEvent(Base):
     rule_version: Mapped[str] = mapped_column(String, default="v1")
     # "ai" when the model phrased the hint, "rule" for the fixed fallback text
     generated_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    # The LEGO puzzle or park question the hint was for (hint limits are per item)
+    item_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # True when the student asked for it with the "Need a hint?" button
+    requested: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

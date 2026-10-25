@@ -16,6 +16,7 @@ Providers (AI_PROVIDER in backend/.env):
 Privacy: the model only receives the task context listed in `_context_for`,
 never the participant's name, demographics, or the correct answer.
 """
+import base64
 import json
 import logging
 import re
@@ -34,9 +35,15 @@ PRAISE_WORDS = {"great", "awesome", "nice", "perfect", "amazing", "excellent", "
 DEFAULT_MODELS = {"anthropic": "claude-opus-5-5"}
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
+# Bump on any change to SYSTEM_PROMPT or what the model is sent; stored with
+# every hint so analyses can tell prompt versions apart.
+PROMPT_VERSION = "v2"
+
 SYSTEM_PROMPT = """You write one hint for a child aged 10 to 14 doing a spatial reasoning activity.
 
 You are given the activity, what the child's answer got wrong (already worked out by the app), and a fixed hint. Rewrite the fixed hint so it is clearer and more concrete for this exact situation, for example by naming the objects or the view involved.
+
+You may also get session_so_far: what this child has done earlier in today's session. Use it. If an earlier hint about the same problem did not help, the fixed hint is only background: do not reuse that idea or its words. Suggest a different way to check instead (for example another view to compare, counting from the bottom up, or looking at one corner at a time). If the same kind of mistake keeps happening, say so gently.
 
 Rules:
 - One sentence, at most 12 words, plain words a 10-year-old reads easily.
@@ -123,6 +130,8 @@ async def _openai_compatible(system: str, user: str) -> tuple[str, str]:
         "model": active_model(),
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }
+    if settings.ai_reasoning_effort:
+        body["reasoning_effort"] = settings.ai_reasoning_effort
     try:
         async with _http_client() as client:
             res = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
@@ -141,6 +150,50 @@ async def _openai_compatible(system: str, user: str) -> tuple[str, str]:
 
 
 PROVIDERS = {"anthropic": _anthropic, "openai": _openai_compatible}
+
+
+# ---- one-off calls with images (park scene maps; not used for live hints) ------------
+
+VISION_TIMEOUT_SECONDS = 120
+
+
+async def _anthropic_vision(system: str, user: str, images: list[tuple[str, bytes]]) -> tuple[str, str]:
+    client = anthropic.AsyncAnthropic(api_key=settings.ai_api_key, timeout=VISION_TIMEOUT_SECONDS)
+    content = [
+        {"type": "image", "source": {"type": "base64", "media_type": mime, "data": base64.b64encode(data).decode()}}
+        for mime, data in images
+    ] + [{"type": "text", "text": user}]
+    try:
+        response = await client.messages.create(
+            model=active_model(), max_tokens=4096, system=system,
+            messages=[{"role": "user", "content": content}],
+        )
+    except anthropic.APIError as e:
+        raise AIUnavailable(str(e)) from e
+    if response.stop_reason == "refusal":
+        raise AIUnavailable("declined")
+    return "".join(b.text for b in response.content if b.type == "text"), response.model
+
+
+async def _openai_vision(system: str, user: str, images: list[tuple[str, bytes]]) -> tuple[str, str]:
+    base_url = (settings.ai_base_url or DEFAULT_OPENAI_BASE_URL).rstrip("/")
+    headers = {"Authorization": f"Bearer {settings.ai_api_key}"} if settings.ai_api_key else {}
+    content = [{"type": "text", "text": user}] + [
+        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode()}"}}
+        for mime, data in images
+    ]
+    body = {"model": active_model(), "messages": [{"role": "system", "content": system}, {"role": "user", "content": content}]}
+    try:
+        async with httpx.AsyncClient(timeout=VISION_TIMEOUT_SECONDS) as client:
+            res = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
+            res.raise_for_status()
+            data = res.json()
+        return data["choices"][0]["message"]["content"] or "", data.get("model") or active_model()
+    except (httpx.HTTPError, KeyError, IndexError, TypeError) as e:
+        raise AIUnavailable(f"{type(e).__name__}: {e}") from e
+
+
+VISION_PROVIDERS = {"anthropic": _anthropic_vision, "openai": _openai_vision}
 
 
 # ---- hint phrasing --------------------------------------------------------------
@@ -170,12 +223,15 @@ def clean_hint(text: str) -> str | None:
     return sentence
 
 
-async def phrase_hint(task_type: str, feedback: Feedback, request_context: dict, diagnosis: dict | None = None) -> PhrasedHint:
+async def phrase_hint(task_type: str, feedback: Feedback, request_context: dict, diagnosis: dict | None = None,
+                      history: list[str] | None = None) -> PhrasedHint:
     fallback = PhrasedHint(feedback.message, "rule")
     if not ai_status()["enabled"]:
         return fallback
 
     payload = {**_context_for(task_type, request_context, diagnosis), "fixed_hint": feedback.message}
+    if history:
+        payload["session_so_far"] = history
     try:
         text, model = await PROVIDERS[settings.ai_provider](SYSTEM_PROMPT, json.dumps(payload))
     except AIUnavailable as e:

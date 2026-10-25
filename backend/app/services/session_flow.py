@@ -15,7 +15,7 @@ from app.models.session import Session
 from app.models.stage import Stage
 from app.services.orchestration import advance_session_stage, protocol_schedule
 from app.services.rounds import open_session, progress
-from app.services.study_design import gate_for_active_round, not_today_message, round_plan
+from app.services.study_design import CONDITIONS, gate_for_active_round, not_today_message, round_plan
 
 
 async def start_round(participant: Participant, protocol: StudyProtocol, db: AsyncSession, new_participant: bool = False) -> Session:
@@ -29,7 +29,7 @@ async def start_round(participant: Participant, protocol: StudyProtocol, db: Asy
         existing = await open_session(participant.id, db)
         if existing:
             return existing
-        status, round_number = await progress(participant, schedule, db)
+        status, round_number = await progress(participant, schedule, db, protocol.demo_group)
     if status == "waiting":
         raise HTTPException(status_code=409, detail="Your next session isn't ready yet. Ask your teacher.")
     if status == "complete":
@@ -37,6 +37,10 @@ async def start_round(participant: Participant, protocol: StudyProtocol, db: Asy
     if gate_for_active_round(status, round_number, protocol.active_round) == "not_today":
         raise HTTPException(status_code=409, detail=not_today_message(round_number, protocol.active_round))
 
+    if protocol.demo_group and round_number > 1 and participant.condition not in CONDITIONS:
+        participant.condition = protocol.demo_group
+        db.add(AuditLog(actor_type="system", entity_type="participant", entity_id=participant.id,
+                        action="demo_group_assigned", details_json=json.dumps({"condition": protocol.demo_group})))
     plan = round_plan(schedule, participant.condition, round_number)
     session = Session(
         id=str(uuid.uuid4()),  # set now: no mid-request flush needed for the audit entry
@@ -46,7 +50,7 @@ async def start_round(participant: Participant, protocol: StudyProtocol, db: Asy
         current_stage=plan["stages"][0],
         stage_sequence_json=json.dumps(plan["stages"]),
         feedback_stages_json=json.dumps(plan["feedback"]),
-        run_label=protocol.run_label,
+        run_label=protocol.run_label or ("Demo" if protocol.demo_group else None),
         started_at=datetime.utcnow(),
         status="active",
     )
