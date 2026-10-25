@@ -1,6 +1,6 @@
 # Render Blueprint: one free web service runs the API and serves the built
 # React app. Deploy: Render dashboard -> New -> Blueprint -> pick this repo.
-# Set the two `sync: false` values in the dashboard when asked.
+# Set the `sync: false` values (database, passcode, AI key) in the dashboard when asked.
 services:
   - type: web
     name: spatial-learning-platform
@@ -27,3 +27,14 @@ services:
         generateValue: true  # keeps admin logins valid across restarts
       - key: CORS_ORIGINS
         value: '[]'          # same origin; nothing cross-site to allow
+      # AI tutor: Gemini through its OpenAI-compatible endpoint
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_REASONING_EFFORT
+        value: none          # fast replies (~1.5 s) for live hints
+      - key: AI_API_KEY
+        sync: false          # Gemini API key (same as backend/.env)
