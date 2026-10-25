@@ -102,20 +102,22 @@ async def main(args) -> None:
         jobs += [lambda q=q, a=a: run_park(q, a, map_text) for q, a in park_cases(args.limit - n_lego)]
 
     out = Path(args.out or f"eval_hints_{datetime.now():%Y%m%d_%H%M}.csv")
+    fields = ["task", "case", "mistake", "rule_hint", "hint", "generated_by", "label", "focus", "leak", "ms",
+              "rating_1_to_5", "rater_notes"]
     rows = []
-    for i, job in enumerate(jobs):
-        if i:
-            await asyncio.sleep(args.delay)
-        start = time.perf_counter()
-        row = await job()
-        row["ms"] = round((time.perf_counter() - start) * 1000)
-        rows.append(row)
-        print(f"[{i + 1}/{len(jobs)}] {row['task']} {row['case']}: [{row['generated_by']}] {row['hint']}", flush=True)
-
-    with out.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0]) + ["rating_1_to_5", "rater_notes"])
+    with out.open("w", newline="", encoding="utf-8") as f:   # row by row, so a crash keeps what's done
+        writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-        writer.writerows(rows)
+        for i, job in enumerate(jobs):
+            if i:
+                await asyncio.sleep(args.delay)
+            start = time.perf_counter()
+            row = await job()
+            row["ms"] = round((time.perf_counter() - start) * 1000)
+            rows.append(row)
+            writer.writerow(row)
+            f.flush()
+            print(f"[{i + 1}/{len(jobs)}] {row['task']} {row['case']}: [{row['generated_by']}] {row['hint']}", flush=True)
     by = Counter((r["task"], r["generated_by"]) for r in rows)
     print(f"\nWrote {out}: {len(rows)} hints; {dict(by)}; leaks: {sum(r['leak'] for r in rows)}")
 
